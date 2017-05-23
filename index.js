@@ -46,9 +46,12 @@ app.post('/webhook/', function (req, res) {
 		    }
 			if(result){
 				sendTextMessage(sender, "Text" + text.substring(0, 200)+ ", link: "+ result)
+				continue
 			} else {
 				sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+				continue
 			}
+			sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
 	    }
     }
     res.sendStatus(200)
