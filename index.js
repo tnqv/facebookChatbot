@@ -1,9 +1,15 @@
 'use strict'
+import anchorme from "anchorme";
 
 const express = require('express')
 const bodyParser = require('body-parser')
 const request = require('request')
 const app = express()
+
+const token = process.env.FB_PAGE_ACCESS_TOKEN
+
+const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3"
+const API_KEY = "AIzaSyBmzTvTcdLiafSUnFbm9YqlB7wz8og5AZI"
 
 app.set('port', (process.env.PORT || 5000))
 
@@ -33,13 +39,15 @@ app.post('/webhook/', function (req, res) {
 	    let sender = event.sender.id
 	    if (event.message && event.message.text) {
 		    let text = event.message.text
+		    if (text === 'Generic') {
+			    sendGenericMessage(sender)
+		    	continue
+		    }
 		    sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
 	    }
     }
     res.sendStatus(200)
 })
-
-const token = process.env.FB_PAGE_ACCESS_TOKEN
 
 // Spin up the server
 app.listen(app.get('port'), function() {
@@ -60,6 +68,76 @@ function sendTextMessage(sender, text) {
 		if (error) {
 		    console.log('Error sending messages: ', error)
 		} else if (response.body.error) {
+		    console.log('Error: ', response.body.error)
+	    }
+    })
+}
+
+function requestMusic(sender, url) {
+
+}
+
+function validateYouTubeUrl()
+{
+    var url = $('#youTubeUrl').val();
+        if (url != undefined || url != '') {
+            var regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|\?v=)([^#\&\?]*).*/;
+            var match = url.match(regExp);
+            if (match && match[2].length == 11) {
+                // Do anything for being valid
+                // if need to change the url to embed url then use below line
+                $('#ytplayerSide').attr('src', 'https://www.youtube.com/embed/' + match[2] + '?autoplay=0');
+            }
+            else {
+                // Do anything for not being valid
+            }
+        }
+}
+
+function sendGenericMessage(sender) {
+    let messageData = {
+	    "attachment": {
+		    "type": "template",
+		    "payload": {
+				"template_type": "generic",
+			    "elements": [{
+					"title": "First card",
+				    "subtitle": "Element #1 of an hscroll",
+				    "image_url": "http://messengerdemo.parseapp.com/img/rift.png",
+				    "buttons": [{
+					    "type": "web_url",
+					    "url": "https://www.messenger.com",
+					    "title": "web url"
+				    }, {
+					    "type": "postback",
+					    "title": "Postback",
+					    "payload": "Payload for first element in a generic bubble",
+				    }],
+			    }, {
+				    "title": "Second card",
+				    "subtitle": "Element #2 of an hscroll",
+				    "image_url": "http://messengerdemo.parseapp.com/img/gearvr.png",
+				    "buttons": [{
+					    "type": "postback",
+					    "title": "Postback",
+					    "payload": "Payload for second element in a generic bubble",
+				    }],
+			    }]
+		    }
+	    }
+    }
+    request({
+	    url: 'https://graph.facebook.com/v2.6/me/messages',
+	    qs: {access_token:token},
+	    method: 'POST',
+	    json: {
+		    recipient: {id:sender},
+		    message: messageData,
+	    }
+    }, function(error, response, body) {
+	    if (error) {
+		    console.log('Error sending messages: ', error)
+	    } else if (response.body.error) {
 		    console.log('Error: ', response.body.error)
 	    }
     })
