@@ -13,7 +13,6 @@
   "author": "SkyLabMember",
   "license": "ISC",
   "dependencies": {
-    "anchorme": "^1.1.2",
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "opn": "^5.0.0",
