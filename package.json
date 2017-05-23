@@ -1,0 +1,20 @@
+{
+  "name": "skylabmusicbot",
+  "version": "1.0.0",
+  "description": "Bot for SkyLab member to select music",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://git.heroku.com/stormy-refuge-80697.git"
+  },
+  "author": "SkyLabMember",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "request": "^2.81.0"
+  }
+}
