@@ -39,11 +39,16 @@ app.post('/webhook/', function (req, res) {
 	    let sender = event.sender.id
 	    if (event.message && event.message.text) {
 		    let text = event.message.text
+			var result = anchorme(text)
 		    if (text === 'Generic') {
 			    sendGenericMessage(sender)
 		    	continue
 		    }
-		    sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+			if(result){
+				sendTextMessage(sender, "Text" + text.substring(0, 200)+ ", link: "+ result)
+			} else {
+				sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
+			}
 	    }
     }
     res.sendStatus(200)
@@ -124,4 +129,10 @@ function sendGenericMessage(sender) {
 		    console.log('Error: ', response.body.error)
 	    }
     })
+}
+
+function getYoutubeVideoId(url){
+    var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
+    var match = url.match(regExp);
+    return (match&&match[7].length==11)? match[7] : false;
 }
