@@ -37,15 +37,24 @@ app.post('/webhook/', function (req, res) {
     for (let i = 0; i < messaging_events.length; i++) {
 	    let event = req.body.entry[0].messaging[i]
 	    let sender = event.sender.id
+		let name = getFbName(sender)
 	    if (event.message && event.message.text) {
 		    let text = event.message.text
 		    
 			var id = getYoutubeVideoId(text)
+			
 			if (id) {
-				opn(text, {app: 'chrome'});
+				opn(text);
 				sendTextMessage(sender, "Ô kê quẩy lên!!")
 				continue
 			}
+
+			if (text.includes('mp3.zing.vn')){
+				opn(text);
+				sendTextMessage(sender, "Ô kê quẩy luôn!!")
+				continue
+			}
+
 			sendTextMessage(sender, "Hong phải link youtube ahihi đồ ngốc!")
 			// sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
 	    }
@@ -57,6 +66,25 @@ app.post('/webhook/', function (req, res) {
 app.listen(app.get('port'), function() {
 	console.log('running on port', app.get('port'))
 })
+
+function getFbName(sender) {
+	request({
+		url: 'https://graph.facebook.com/'+ sender +'?fields=name&access_token=',
+		qs: {access_token:token},
+		method: 'GET'
+		}, function(error, response, body) {
+			if (error) {
+				console.log('Error request name: ', error)
+				return false
+			} else if (response.body.error) {
+				console.log('Error: ', response.body.error)
+				return false
+			} else {
+				return response
+			}
+		}
+	)
+}
 
 function sendTextMessage(sender, text) {
     let messageData = { text:text }
