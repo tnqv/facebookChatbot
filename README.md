@@ -10,13 +10,13 @@ This instruction will walk you through necessary steps to host the bot from this
 (You need to register to be fb dev before continue to the app page)
 * In Token Generation section, copy the token for Skylab Music page
 * Add an enviroment variable to your local system: FB_PAGE_ACCESS_TOKEN: {token gotten from the link above}
-* From the repo folder, run <code>heroku local web</code> to start localhost
+* From the repo folder, run `heroku local web` to start localhost
 * Open [http://localhost:5000](http://localhost:5000) to check if the server is running
 
 ### Setup ngrok ###
 
 * Install [ngrok](https://ngrok.com/download)
-* Run <code>ngrok http -region ap 5000</code> to expose localhost to a web domain through port 5000
+* Run `ngrok http -region ap 5000` to expose localhost to a web domain through port 5000
 * The ngrok cmd screen shows the free domain currently using for your localhost
 
 ### Connect FB to the bot ###
