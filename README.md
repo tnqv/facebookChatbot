@@ -16,7 +16,7 @@ This instruction will walk you through necessary steps to host the bot from this
 ### Setup ngrok ###
 
 * Install [ngrok](https://ngrok.com/download)
-* Run <code>ngrok http 5000</code> to expose localhost to a web domain through port 5000
+* Run <code>ngrok http -region ap 5000</code> to expose localhost to a web domain through port 5000
 * The ngrok cmd screen shows the free domain currently using for your localhost
 
 ### Connect FB to the bot ###
