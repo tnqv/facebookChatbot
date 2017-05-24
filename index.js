@@ -21,7 +21,7 @@ app.use(bodyParser.json())
 
 // Index route
 app.get('/', function (req, res) {
-	res.send('Hello world, I am a chat bot')
+	res.send('Hello world, I am a chat bot hihi')
 })
 
 // for Facebook verification
@@ -43,7 +43,7 @@ app.post('/webhook/', function (req, res) {
 			var id = getYoutubeVideoId(text)
 			if (id) {
 				opn(text, {app: 'chrome'});
-				sendTextMessage(sender, "This is the id: " + id)
+				sendTextMessage(sender, "Ô kê quẩy lên!!")
 				continue
 			}
 			sendTextMessage(sender, "Hong phải link youtube ahihi đồ ngốc!")
