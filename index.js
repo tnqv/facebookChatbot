@@ -7,7 +7,7 @@ const app = express();
 const opn = require("opn");
 const vol = require("vol");
 
-const token = process.env.FB_PAGE_ACCESS_TOKEN;
+const token = process.env.FB_PAGE_ACCESS_TOKEN || 'EAAUdTbCZA0aoBAIlqZAC87lacdfgWoFyySJhJJ9LEFbZA2paNyT2o5hLPtmwOI9hsyWQy8hXOLShPA2aN2WIn9yx4BuPv2y6cjmzZBzDZCWUKE0qUrcImiEptea7OGOpWZBm29R0cXApZBd0DFLu9ye8rZAzPA534ZAVW01dPBicICgZDZD';
 
 const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3";
 const API_KEY = "AIzaSyBmzTvTcdLiafSUnFbm9YqlB7wz8og5AZI";
