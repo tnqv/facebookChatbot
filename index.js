@@ -29,6 +29,7 @@ app.get("/", function(req, res) {
 app.get("/webhook/", function(req, res) {
     if (req.query["hub.verify_token"] === "my_voice_is_my_password_verify_me") {
         res.send(req.query["hub.challenge"]);
+		return;
     }
     res.send("Error, wrong token");
 });
@@ -45,13 +46,13 @@ app.post("/webhook/", function(req, res) {
             var id = getYoutubeVideoId(text);
 
             if (id) {
-                opn(text);
+                opn(text, 'music');
                 sendTextMessage(sender, "Ô kê quẩy lên!!");
                 continue;
             }
 
             if (text.includes("mp3.zing.vn")) {
-                opn(text);
+                opn(text, 'music');
                 sendTextMessage(sender, "Ô kê quẩy luôn!!");
                 continue;
             }
