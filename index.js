@@ -129,6 +129,7 @@ function getFbName(sender) {
 
 function sendTextMessage(sender, text) {
     let messageData = { text: text };
+	console.log('Send message for user: ' + sender, 'Your token: ' + token);
     request(
         {
             url: "https://graph.facebook.com/v2.6/me/messages",
