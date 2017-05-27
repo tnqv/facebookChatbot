@@ -7,7 +7,9 @@ const app = express();
 const opn = require("opn");
 const vol = require("vol");
 
-const token = process.env.FB_PAGE_ACCESS_TOKEN || 'EAAUdTbCZA0aoBAIlqZAC87lacdfgWoFyySJhJJ9LEFbZA2paNyT2o5hLPtmwOI9hsyWQy8hXOLShPA2aN2WIn9yx4BuPv2y6cjmzZBzDZCWUKE0qUrcImiEptea7OGOpWZBm29R0cXApZBd0DFLu9ye8rZAzPA534ZAVW01dPBicICgZDZD';
+const token =
+    process.env.FB_PAGE_ACCESS_TOKEN ||
+    "EAAUdTbCZA0aoBAIlqZAC87lacdfgWoFyySJhJJ9LEFbZA2paNyT2o5hLPtmwOI9hsyWQy8hXOLShPA2aN2WIn9yx4BuPv2y6cjmzZBzDZCWUKE0qUrcImiEptea7OGOpWZBm29R0cXApZBd0DFLu9ye8rZAzPA534ZAVW01dPBicICgZDZD";
 
 const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3";
 const API_KEY = "AIzaSyBmzTvTcdLiafSUnFbm9YqlB7wz8og5AZI";
@@ -15,139 +17,315 @@ const API_KEY = "AIzaSyBmzTvTcdLiafSUnFbm9YqlB7wz8og5AZI";
 app.set("port", process.env.PORT || 5000);
 
 // Process application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 
 // Process application/json
 app.use(bodyParser.json());
 
 // Index route
-app.get("/", function(req, res) {
+app.get("/", function (req, res) {
     res.send("Hello world, I am a chat bot hihi");
 });
 
 // for Facebook verification
-app.get("/webhook/", function(req, res) {
-    if (req.query["hub.verify_token"] === "my_voice_is_my_password_verify_me") {
-        res.send(req.query["hub.challenge"]);
-		return;
+app.get("/webhook/", function (req, res) {
+    if (
+        req.query["hub.mode"] === "subscribe" &&
+        req.query["hub.verify_token"] === "my_voice_is_my_password_verify_me"
+    ) {
+        res.status(200).send(req.query["hub.challenge"]);
+        return;
     }
-    res.send("Error, wrong token");
+    console.error("Failed validation. Make sure the validation tokens match.");
+    res.sendStatus(403);
 });
 
-app.post("/webhook/", function(req, res) {
-    let messaging_events = req.body.entry[0].messaging;
-    for (let i = 0; i < messaging_events.length; i++) {
-        let event = req.body.entry[0].messaging[i];
-        let sender = event.sender.id;
-        let name = getFbName(sender);
-        if (event.message && event.message.text) {
-            let text = event.message.text;
+app.post("/webhook/", function (req, res) {
+    var data = req.body;
 
-            var id = getYoutubeVideoId(text);
+    // Make sure this is a page subscription
+    if (data.object === "page") {
+        // Iterate over each entry - there may be multiple if batched
+        data.entry.forEach(function (entry) {
+            var pageID = entry.id;
+            var timeOfEvent = entry.time;
 
-            if (id) {
-                opn(text, 'music');
-                sendTextMessage(sender, "Ô kê quẩy lên!!");
-                continue;
-            }
-
-            if (text.includes("mp3.zing.vn")) {
-                opn(text, 'music');
-                sendTextMessage(sender, "Ô kê quẩy luôn!!");
-                continue;
-            }
-
-            if (
-                text.includes("nín") ||
-                text.includes("câm") ||
-                text.includes("im")
-            ) {
-                vol.set(0, function(err) {
-                    console.log("Volume muted");
-                });
-                sendTextMessage(sender, "Zồi, im zồi");
-                continue;
-            } else if (text.includes("volume")) {
-                let level = parseFloat(text.match(/\d+/)) / 100;
-                if (level) {
-                    vol.set(level, function(err) {
-                        console.log("Changed volume to " + level * 100 + "%");
-                    });
-                    sendTextMessage(
-                        sender,
-                        "Zồi, volume là " + level * 100 + "% zồi đó"
-                    );
+            // Iterate over each messaging event
+            entry.messaging.forEach(function (event) {
+                if (event.message) {
+                    console.log(entry.id);
+                    receivedMessage(event);
+                } else if (event.postback) {
+                    receivedPostback(event);
                 } else {
-                    vol.get(function(err, level) {
-                        console.log(level);
-                        sendTextMessage(
-                            sender,
-                            "Volume đang là " + level * 100 + "% bạn ơi"
-                        );
-                    });
+                    console.log("Webhook received unknown event: ", event);
                 }
-                continue;
-            }
-
-            sendTextMessage(
-                sender,
-                "Hong phải link youtube/zing mp3 ahihi đồ ngốc!"
-            );
-            // sendTextMessage(sender, "Text received, echo: " + text.substring(0, 200))
-        }
+            });
+        });
     }
+
+    // Assume all went well.
+    //
+    // You must send back a 200, within 20 seconds, to let us know
+    // you've successfully received the callback. Otherwise, the request
+    // will time out and we will keep trying to resend.
     res.sendStatus(200);
 });
 
-// Spin up the server
-app.listen(app.get("port"), function() {
-    console.log("running on port", app.get("port"));
-});
+function receivedMessage(event) {
+    var senderID = event.sender.id;
+    var recipientID = event.recipient.id;
+    var timeOfMessage = event.timestamp;
+    var message = event.message;
 
-function getFbName(sender) {
-    request(
-        {
-            url: "https://graph.facebook.com/" +
-                sender +
-                "?fields=name&access_token=",
-            qs: { access_token: token },
-            method: "GET"
+    console.log(
+        "Received message for user %d and page %d at %d with message:",
+        senderID,
+        recipientID,
+        timeOfMessage
+    );
+    console.log(JSON.stringify(message));
+
+    var messageId = message.mid;
+
+    var messageText = message.text;
+    var messageAttachments = message.attachments;
+
+    getFbName(senderID).then(first_name => {
+        if (messageText) {
+            // Set nickname
+            switch (first_name) {
+                case "Hưng":
+                    first_name = "Bà già xài Zalo";
+                    break;
+                case "Vũ":
+                    first_name = "Zú";
+                    break;
+                default:
+                    break;
+            }
+
+            //Check & open youtube link
+            var videoId = getYoutubeVideoId(messageText);
+            if (videoId) {
+                opn(messageText, "music");
+                sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
+                return;
+            }
+
+            //Check & open zing mp3 link
+            if (messageText.includes("mp3.zing.vn")) {
+                opn(messageText, "music");
+                sendTextMessage(
+                    senderID,
+                    "Ô kê quẩy luôn " + first_name + "!!"
+                );
+                return;
+            }
+
+            //Adjust volume
+            if (
+                messageText.includes("nín") ||
+                messageText.includes("câm") ||
+                messageText.includes("im")
+            ) {
+                vol.set(0, function (err) {
+                    console.log("Volume muted");
+                });
+                sendTextMessage(senderID, "Zồi, im zồi đó " + first_name);
+                return;
+            } else if (messageText.includes("volume")) {
+                let level = parseFloat(messageText.match(/\d+/)) / 100;
+                if (level) {
+                    vol.set(level, function (err) {
+                        console.log("Changed volume to " + level * 100 + "%");
+                    });
+                    sendTextMessage(
+                        senderID,
+                        "Zồi, volume là " + level * 100 + "% zồi đó " + first_name
+                    );
+                } else {
+                    vol.get(function (err, level) {
+                        console.log(level);
+                        sendTextMessage(
+                            senderID,
+                            "Volume đang là " + level * 100 + "% " + first_name + " ơi"
+                        );
+                    });
+                }
+                return;
+            }
+
+            //Default text
+            switch (messageText) {
+                case "generic":
+                    sendGenericMessage(senderID);
+                    break;
+
+                default:
+                    sendTextMessage(
+                        senderID,
+                        "Hong phải link youtube/zing mp3 ahihi " +
+                        first_name +
+                        " ngốc!"
+                    );
+                    break;
+            }
+        } else if (messageAttachments) {
+            // sendTextMessage(senderID, "Message with attachment received");
+        }
+    });
+}
+
+function receivedPostback(event) {
+    var senderID = event.sender.id;
+    var recipientID = event.recipient.id;
+    var timeOfPostback = event.timestamp;
+
+    // The 'payload' param is a developer-defined field which is set in a postback
+    // button for Structured Messages.
+    var payload = event.postback.payload;
+
+    console.log(
+        "Received postback for user %d and page %d with payload '%s' " +
+        "at %d",
+        senderID,
+        recipientID,
+        payload,
+        timeOfPostback
+    );
+
+    // When a postback is called, we'll send a message back to the sender to
+    // let them know it was successful
+    sendTextMessage(senderID, "Postback called");
+}
+
+function sendGenericMessage(recipientId, messageText) {
+    var messageData = {
+        recipient: {
+            id: recipientId
         },
-        function(error, response, body) {
-            if (error) {
-                console.log("Error request name: ", error);
-                return false;
-            } else if (response.body.error) {
-                console.log("Error: ", response.body.error);
-                return false;
+        message: {
+            attachment: {
+                type: "template",
+                payload: {
+                    template_type: "generic",
+                    elements: [{
+                            title: "rift",
+                            subtitle: "Next-generation virtual reality",
+                            item_url: "https://www.oculus.com/en-us/rift/",
+                            image_url: "http://messengerdemo.parseapp.com/img/rift.png",
+                            buttons: [{
+                                    type: "web_url",
+                                    url: "https://www.oculus.com/en-us/rift/",
+                                    title: "Open Web URL"
+                                },
+                                {
+                                    type: "postback",
+                                    title: "Call Postback",
+                                    payload: "Payload for first bubble"
+                                }
+                            ]
+                        },
+                        {
+                            title: "touch",
+                            subtitle: "Your Hands, Now in VR",
+                            item_url: "https://www.oculus.com/en-us/touch/",
+                            image_url: "http://messengerdemo.parseapp.com/img/touch.png",
+                            buttons: [{
+                                    type: "web_url",
+                                    url: "https://www.oculus.com/en-us/touch/",
+                                    title: "Open Web URL"
+                                },
+                                {
+                                    type: "postback",
+                                    title: "Call Postback",
+                                    payload: "Payload for second bubble"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    };
+
+    callSendAPI(messageData);
+}
+
+function sendTextMessage(recipientId, messageText) {
+    var messageData = {
+        recipient: {
+            id: recipientId
+        },
+        message: {
+            text: messageText
+        }
+    };
+
+    callSendAPI(messageData);
+}
+
+function callSendAPI(messageData) {
+    request({
+            uri: "https://graph.facebook.com/v2.6/me/messages",
+            qs: {
+                access_token: token
+            },
+            method: "POST",
+            json: messageData
+        },
+        function (error, response, body) {
+            if (!error && response.statusCode == 200) {
+                var recipientId = body.recipient_id;
+                var messageId = body.message_id;
+
+                console.log(
+                    "Successfully sent generic message with id %s to recipient %s",
+                    messageId,
+                    recipientId
+                );
             } else {
-                return response;
+                console.error("Unable to send message.");
+                console.error(response);
+                console.error(error);
             }
         }
     );
 }
 
-function sendTextMessage(sender, text) {
-    let messageData = { text: text };
-	console.log('Send message for user: ' + sender, 'Your token: ' + token);
-    request(
-        {
-            url: "https://graph.facebook.com/v2.6/me/messages",
-            qs: { access_token: token },
-            method: "POST",
-            json: {
-                recipient: { id: sender },
-                message: messageData
+// Spin up the server
+app.listen(app.get("port"), function () {
+    console.log("running on port", app.get("port"));
+});
+
+function getFbName(senderID) {
+    return new Promise((resolve, reject) => {
+        request({
+                url: "https://graph.facebook.com/v2.9/" + senderID,
+                qs: {
+                    fields: "first_name",
+                    access_token: token
+                },
+                method: "GET"
+            },
+            function (error, response, body) {
+                if (error) {
+                    console.log("Error request name: ", error);
+                    reject(error);
+                } else if (response.body.error) {
+                    console.log("Error getting fb name: ", response.body.error);
+                    reject(response.body.error);
+                } else {
+                    body = JSON.parse(body);
+                    console.log("Got name: ", body.first_name);
+                    resolve(body.first_name);
+                }
             }
-        },
-        function(error, response, body) {
-            if (error) {
-                console.log("Error sending messages: ", error);
-            } else if (response.body.error) {
-                console.log("Error: ", response.body.error);
-            }
-        }
-    );
+        );
+    });
 }
 
 function requestMusic(sender, url) {}
