@@ -4,7 +4,9 @@
   "description": "Bot for SkyLab member to select music",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "init": "heroku local web",
+    "start": "ngrok http -region ap 5000"
   },
   "repository": {
     "type": "git",

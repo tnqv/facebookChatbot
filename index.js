@@ -29,6 +29,10 @@ app.get("/", function (req, res) {
     res.send("Hello world, I am a chat bot hihi");
 });
 
+app.get("/youtube/", function (req, res) {
+    res.sendFile("/youtube.html", {root: __dirname});
+})
+
 // for Facebook verification
 app.get("/webhook/", function (req, res) {
     if (
@@ -96,12 +100,27 @@ function receivedMessage(event) {
     getFbName(senderID).then(first_name => {
         if (messageText) {
             // Set nickname
-            switch (first_name) {
-                case "Hưng":
+            switch (senderID) {
+                case '1176661302462412':
                     first_name = "Bà già xài Zalo";
                     break;
-                case "Vũ":
+                case '1370107956411784':
                     first_name = "Zú";
+                    break;
+                case '738286506296286':
+                    first_name = "chị đại";
+                    break;
+                case '1067670383333151':
+                    first_name = "Tuấn Nguyễn";
+                    break;
+                case '1447875711972194':
+                    first_name = "a Việt";
+                    break;
+                case '1843143285699478':
+                    first_name = "admin";
+                    break;
+                case '1218099261649369':
+                    first_name = "Hưng bồ Quyên";
                     break;
                 default:
                     break;
