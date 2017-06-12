@@ -1,21 +1,52 @@
 "use strict";
-
 const express = require("express");
 const bodyParser = require("body-parser");
 const request = require("request");
 const app = express();
 const opn = require("opn");
 const vol = require("vol");
+const mongodb = require("mongodb");
+const sendMessage = require("./send_message.js");
+//----socket io 
+const http = require("http").createServer(app);
+const io = require("socket.io").listen(http);
 
+const fs = require('fs');
 const token =
     process.env.FB_PAGE_ACCESS_TOKEN ||
     "EAAUdTbCZA0aoBAIlqZAC87lacdfgWoFyySJhJJ9LEFbZA2paNyT2o5hLPtmwOI9hsyWQy8hXOLShPA2aN2WIn9yx4BuPv2y6cjmzZBzDZCWUKE0qUrcImiEptea7OGOpWZBm29R0cXApZBd0DFLu9ye8rZAzPA534ZAVW01dPBicICgZDZD";
 
 const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3";
-const API_KEY = "AIzaSyBmzTvTcdLiafSUnFbm9YqlB7wz8og5AZI";
+
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+
+const API_ZING_MP3_GETLINK_URL = "http://api.mp3.zing.vn/api/mobile/song/getsonginfo?requestdata=";
+
+// https://www.googleapis.com/youtube/v3/videos?id=9bZkp7q19f0&part=contentDetails&key=
+
+//var mongodbUrl = 'mongodb://tnqv102:Bikhung101@ds111922.mlab.com:11922/heroku_shxqcpv3'
+const mongodbUrl = process.env.MONGOLAB_URI;
+
+var MongoClient = mongodb.MongoClient;
+// var assert = require('assert');
+// MongoClient.connect(mongodbUrl, function (err, db) {
+//     assert.equal(null, err);
+//     console.log("Connect to server successfully");
+//     db.close();
+// });
+var socketClient = null;
+io.on('connection', function(client) {
+    socketClient = client;
+    console.log('Client connected...');
+    client.emit('messages', { msg: 'Hello from server'});
+
+    client.on('join', function(data) {
+        console.log(data);
+    });
+
+});
 
 app.set("port", process.env.PORT || 5000);
-
 // Process application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({
     extended: false
@@ -30,9 +61,14 @@ app.get("/", function (req, res) {
 });
 
 app.get("/youtube/", function (req, res) {
-    res.sendFile("/youtube.html", {root: __dirname});
+    res.sendFile("/youtube.html", { root: __dirname });
 })
-
+// app.get("/client-control/",function(req,res){
+//     res.sendFile("/control.html", { root: __dirname });
+// })
+app.post("/client-control/",function(req,res){
+    res.sendFile("/control.html", { root: __dirname });
+})
 // for Facebook verification
 app.get("/webhook/", function (req, res) {
     if (
@@ -78,12 +114,24 @@ app.post("/webhook/", function (req, res) {
     res.sendStatus(200);
 });
 
+function insertSongToDatabase(songUrl) {
+    console.log("song url", songUrl);
+    MongoClient.connect(mongodbUrl, (err, db) => {
+        db.collection('songs').count().then(count => {
+            if (count < 10) {
+                db.collection('songs').insert({ 'song_url': songUrl }).then((result)=>{
+                        db.close();
+                });
+            }else db.close();
+        });
+    });
+}
+
 function receivedMessage(event) {
     var senderID = event.sender.id;
     var recipientID = event.recipient.id;
     var timeOfMessage = event.timestamp;
     var message = event.message;
-
     console.log(
         "Received message for user %d and page %d at %d with message:",
         senderID,
@@ -111,7 +159,7 @@ function receivedMessage(event) {
                     first_name = "chị đại";
                     break;
                 case '1067670383333151':
-                    first_name = "Tuấn Nguyễn";
+                    first_name = "Tuấn tre trau";
                     break;
                 case '1447875711972194':
                     first_name = "a Việt";
@@ -120,71 +168,98 @@ function receivedMessage(event) {
                     first_name = "admin";
                     break;
                 case '1218099261649369':
-                    first_name = "Hưng bồ Quyên";
+                    first_name = "Cu Tũn";
                     break;
                 default:
                     break;
             }
 
             //Check & open youtube link
+            
             var videoId = getYoutubeVideoId(messageText);
             if (videoId) {
-                opn(messageText, "music");
-                sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
+                // , "music"
+                //opn(messageText, "music");
+                // getYoutubeDuration(videoId);
+                console.log("insert db", videoId);
+                if (socketClient != null){
+                    socketClient.emit('songs',{msg : videoId, videoType : 'youtube'});
+                }
+
+                insertSongToDatabase(messageText);
+                sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
                 return;
             }
+            
+            
 
             //Check & open zing mp3 link
             if (messageText.includes("mp3.zing.vn")) {
-                opn(messageText, "music");
-                sendTextMessage(
+                //opn(messageText, "music");
+                console.log("mp3 ne` hehehe",messageText);
+                console.log(getMP3VideoId(messageText));
+                if (socketClient != null){
+                        socketClient.emit('songs',{msg : videoId, videoType : 'mp3'});
+                }
+                sendMessage.sendTextMessage(
                     senderID,
                     "Ô kê quẩy luôn " + first_name + "!!"
                 );
                 return;
             }
 
-            //Adjust volume
-            if (
-                messageText.includes("nín") ||
-                messageText.includes("câm") ||
-                messageText.includes("im")
-            ) {
-                vol.set(0, function (err) {
-                    console.log("Volume muted");
-                });
-                sendTextMessage(senderID, "Zồi, im zồi đó " + first_name);
-                return;
-            } else if (messageText.includes("volume")) {
-                let level = parseFloat(messageText.match(/\d+/)) / 100;
-                if (level) {
-                    vol.set(level, function (err) {
-                        console.log("Changed volume to " + level * 100 + "%");
-                    });
-                    sendTextMessage(
-                        senderID,
-                        "Zồi, volume là " + level * 100 + "% zồi đó " + first_name
-                    );
-                } else {
-                    vol.get(function (err, level) {
-                        console.log(level);
-                        sendTextMessage(
-                            senderID,
-                            "Volume đang là " + level * 100 + "% " + first_name + " ơi"
-                        );
-                    });
+            if(messageText.includes("mute") 
+                ||  messageText.includes("nín") 
+                ||  messageText.includes("câm")){
+                if(socketClient != null){
+                    socketClient.emit("mute",{});
                 }
-                return;
+                
             }
+
+            if(messageText.includes("unmute")){
+                if(socketClient != null){
+                    socketClient.emit("unmute",{});
+                }
+                
+            }
+
+            if(messageText.includes("dừng")||
+                messageText.includes("stop")){
+                if(socketClient != null){
+                    socketClient.emit("stop",{});
+                }    
+                
+            }
+
+            if(messageText.includes("resume")){
+                if(socketClient != null){
+                    socketClient.emit("resume",{});
+                }
+                
+            }
+
+            if(messageText.includes("set volumn")){
+                    let arrayMessage = new Array();
+                    arrayMessage = messageText.split(" ");
+                    let volumnNumber = parseInt(arrayMessage[2]);
+                    if(socketClient != null){
+                        socketClient.emit("setVolumn",{volumnOption : volumnNumber});
+                    }
+                    
+            }
+            
 
             //Default text
             switch (messageText) {
                 case "generic":
-                    sendGenericMessage(senderID);
+                    sendMessage.sendGenericMessage(senderID);
                     break;
-
+                case "volumn":
+                    sendMessage.sendQuickReplyMessage(senderID);
+                    break;
                 default:
-                    sendTextMessage(
+                    sendMessage.sendTextMessage(
                         senderID,
                         "Hong phải link youtube/zing mp3 ahihi " +
                         first_name +
@@ -195,7 +270,7 @@ function receivedMessage(event) {
         } else if (messageAttachments) {
             // sendTextMessage(senderID, "Message with attachment received");
         }
-    });
+    }).catch(err => console.log(err));
 }
 
 function receivedPostback(event) {
@@ -218,118 +293,40 @@ function receivedPostback(event) {
 
     // When a postback is called, we'll send a message back to the sender to
     // let them know it was successful
-    sendTextMessage(senderID, "Postback called");
+    sendMessage.sendTextMessage(senderID, "Postback called");
 }
 
-function sendGenericMessage(recipientId, messageText) {
-    var messageData = {
-        recipient: {
-            id: recipientId
-        },
-        message: {
-            attachment: {
-                type: "template",
-                payload: {
-                    template_type: "generic",
-                    elements: [{
-                            title: "rift",
-                            subtitle: "Next-generation virtual reality",
-                            item_url: "https://www.oculus.com/en-us/rift/",
-                            image_url: "http://messengerdemo.parseapp.com/img/rift.png",
-                            buttons: [{
-                                    type: "web_url",
-                                    url: "https://www.oculus.com/en-us/rift/",
-                                    title: "Open Web URL"
-                                },
-                                {
-                                    type: "postback",
-                                    title: "Call Postback",
-                                    payload: "Payload for first bubble"
-                                }
-                            ]
-                        },
-                        {
-                            title: "touch",
-                            subtitle: "Your Hands, Now in VR",
-                            item_url: "https://www.oculus.com/en-us/touch/",
-                            image_url: "http://messengerdemo.parseapp.com/img/touch.png",
-                            buttons: [{
-                                    type: "web_url",
-                                    url: "https://www.oculus.com/en-us/touch/",
-                                    title: "Open Web URL"
-                                },
-                                {
-                                    type: "postback",
-                                    title: "Call Postback",
-                                    payload: "Payload for second bubble"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        }
-    };
+// function callSendAPIYoutube(messageData){
+//     request({
 
-    callSendAPI(messageData);
-}
+//     },
+//         function(error,response,body){
+//             if(!error && response.statusCode == 200){
+//                 var recipientId = body.recipient_id;
+//                 var messageId = body.message_id;
+//             }
+//         }
+//     )
+// }
 
-function sendTextMessage(recipientId, messageText) {
-    var messageData = {
-        recipient: {
-            id: recipientId
-        },
-        message: {
-            text: messageText
-        }
-    };
-
-    callSendAPI(messageData);
-}
-
-function callSendAPI(messageData) {
-    request({
-            uri: "https://graph.facebook.com/v2.6/me/messages",
-            qs: {
-                access_token: token
-            },
-            method: "POST",
-            json: messageData
-        },
-        function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                var recipientId = body.recipient_id;
-                var messageId = body.message_id;
-
-                console.log(
-                    "Successfully sent generic message with id %s to recipient %s",
-                    messageId,
-                    recipientId
-                );
-            } else {
-                console.error("Unable to send message.");
-                console.error(response);
-                console.error(error);
-            }
-        }
-    );
-}
 
 // Spin up the server
 app.listen(app.get("port"), function () {
     console.log("running on port", app.get("port"));
 });
 
+http.listen(5001);
+
 function getFbName(senderID) {
     return new Promise((resolve, reject) => {
         request({
-                url: "https://graph.facebook.com/v2.9/" + senderID,
-                qs: {
-                    fields: "first_name",
-                    access_token: token
-                },
-                method: "GET"
+            url: "https://graph.facebook.com/v2.9/" + senderID,
+            qs: {
+                fields: "first_name",
+                access_token: token
             },
+            method: "GET"
+        },
             function (error, response, body) {
                 if (error) {
                     console.log("Error request name: ", error);
@@ -347,10 +344,16 @@ function getFbName(senderID) {
     });
 }
 
-function requestMusic(sender, url) {}
-
 function getYoutubeVideoId(url) {
     var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
     var match = url.match(regExp);
+    console.log("url youtube", url);
     return match && match[7].length == 11 ? match[7] : false;
+}
+
+function getMP3VideoId(url){
+    let splitStrArrFromUrl = url.split("/");
+    let secondSplit = splitStrArrFromUrl[5].split(".");
+    console.log("url Zing", url);
+    return secondSplit[0] && secondSplit[0].length == 8? secondSplit[0] : false;
 }

@@ -1,0 +1,189 @@
+<!--<html>
+<body>
+    <div id="App"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.0.1/react-with-addons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.0.1/react-dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.24.2/babel.min.js"></script>
+    <script>
+        fetch("./app.js").then(function (response) {
+            response.text().then(function (js) {
+                eval(Babel.transform(js, {presets: ['es2015', 'react']}).code);
+            });
+        });
+    </script>
+</body>
+</html>-->
+<html>
+    <head>
+         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    </head>
+<body>
+    <div id="react-root"></div>
+    <textarea id="chat"></textarea>
+    <br>
+    <div id="video-placeholder"></div>
+    <br>
+     <i id="mute-toggle" class="material-icons">volume_up</i>
+
+    <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+     <input type="range" id="progress-bar" value="0">
+     <br>
+     <h2>Set volume</h2>
+            <input id="volume-input" type="number" max="100" min="0">
+    <br>
+    <audio id="audio" controls>
+        Your browser does not support the audio element.
+         <source id="mp3Source" type="audio/mp3"></source>
+    </audio>
+    <script src="https://617713f2.ap.ngrok.io/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <script>
+        var songPlaying;
+        var player;
+        var time_update_interval = 0;
+        var socket = io.connect("https://617713f2.ap.ngrok.io");
+         
+        function updateSource(url){ 
+            var audio = document.getElementById('mp3Source');
+            audio.src = url;
+            audio.load();
+            audio.play();
+        }
+
+        socket.on('connection', function(data) {
+            console.log(data);
+            initialize();
+                
+        });
+         function onYouTubeIframeAPIReady() {
+            player = new YT.Player('video-placeholder', {
+                width: 600,
+                height: 400,
+                playerVars: {
+                    color: 'white',
+                },
+                events: {
+                    onReady: initialize
+                }
+            });
+        }
+
+        function initialize(){
+
+            // Update the controls on load
+            updateTimerDisplay();
+            updateProgressBar();
+
+            // Clear any old interval.
+            clearInterval(time_update_interval);
+
+            // Start interval to update elapsed time display and
+            // the elapsed part of the progress bar every second.
+            time_update_interval = setInterval(function () {
+                updateTimerDisplay();
+                updateProgressBar();
+            }, 1000)
+
+        }
+
+        socket.on('messages', function(data){
+            console.log(data);
+             $('#chat').append(data.msg + "<br/>");
+        });
+
+
+        socket.on('songs',function(data){
+            initialize();
+            if(data.videoType === 'mp3'){
+                updateSource(data.msg);
+            }else {
+                player.loadVideoById(data.msg);
+            }
+            
+            
+        });
+
+        socket.on('stop',function(data){
+            player.pauseVideo();
+        });
+
+        socket.on('mute',function(data){
+            player.mute();
+             $('#mute-toggle').text('volume_off');
+        });
+
+        socket.on('resume',function(data){
+            player.playVideo();
+        });
+
+        socket.on('unmute',function(data){
+            if(player.isMuted()){
+                player.unMute();
+                 $('#mute-toggle').text('volume_up');
+            }
+        });
+
+        socket.on('setVolumn',function(data){
+            $('#volumn-input').val(data.volumnOption);
+             player.setVolume(parseInt(data.volumnOption));
+        });
+
+        $('#volume-input').on('change', function () {
+            player.setVolume($(this).val());
+        });
+        
+        $('#mute-toggle').on('click', function() {
+            var mute_toggle = $(this);
+
+            if(player.isMuted()){
+                player.unMute();
+                mute_toggle.text('volume_up');
+            }
+            else{
+                player.mute();
+                mute_toggle.text('volume_off');
+            }
+        });
+//Progress bar         
+        $('#progress-bar').on('mouseup touchend', function (e) {
+
+            // Calculate the new time for the video.
+            // new time in seconds = total duration in seconds * ( value of range input / 100 )
+            var newTime = player.getDuration() * (e.target.value / 100);
+
+            // Skip video to new time.
+            player.seekTo(newTime);
+
+        });
+
+        // This function is called by initialize()
+        function updateProgressBar(){
+            // Update the value of our progress bar accordingly.
+            $('#progress-bar').val((player.getCurrentTime() / player.getDuration()) * 100);
+        }
+
+//update duration time
+        function updateTimerDisplay(){
+            // Update current time text display.
+            $('#current-time').text(formatTime( player.getCurrentTime() ));
+            $('#duration').text(formatTime( player.getDuration() ));
+        }
+        
+        function formatTime(time){
+            time = Math.round(time);
+
+            var minutes = Math.floor(time / 60),
+            seconds = time - minutes * 60;
+
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+
+            return minutes + ":" + seconds;
+        }
+      
+        </script>
+
+</body>
+</html>
