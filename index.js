@@ -35,7 +35,7 @@ io.on("connection", function(client) {
     });
 });
 
-app.set("port", process.env.MESSENGER_PORT || 5000);
+app.set("port", process.env.PORT || 5000);
 // Process application/x-www-form-urlencoded
 app.use(
     bodyParser.urlencoded({
