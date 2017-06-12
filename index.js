@@ -216,7 +216,13 @@ function receivedMessage(event) {
                     }
                 }
 
-                if (messageText.includes("dừng") || messageText.includes("stop")) {
+                if (messageText.includes("dừng") || messageText.includes("pause")) {
+                    if (socketClient != null) {
+                        socketClient.emit("pause", {});
+                    }
+                }
+
+                if (messageText.includes("stop")) {
                     if (socketClient != null) {
                         socketClient.emit("stop", {});
                     }

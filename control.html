@@ -110,6 +110,10 @@
         });
 
         socket.on('stop', function (data) {
+            player.stopVideo();
+        });
+
+        socket.on('pause', function (data) {
             player.pauseVideo();
         });
 

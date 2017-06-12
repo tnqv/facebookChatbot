@@ -41,27 +41,27 @@ module.exports =  {
                     id: recipientId
                 },
                 message: {
-                    text: "Điều chỉnh volumn",
+                    text: "Điều chỉnh volume",
                     quick_replies: [
                         {
                             content_type: "text",
-                            title: "set volumn 30 hộ cái",
-                            payload: "volumn 30"
+                            title: "set volume 30 hộ cái",
+                            payload: "volume 30"
                         },
                         {
                             content_type: "text",
-                            title: "set volumn 50 hộ cái",
-                            payload: "volumn 50"
+                            title: "set volume 50 hộ cái",
+                            payload: "volume 50"
                         },
                         {
                             content_type:"text",
-                            title:"set volumn 70 hộ cái",
-                            payload:"volumn 70"
+                            title:"set volume 70 hộ cái",
+                            payload:"volume 70"
                         },
                         {
                             content_type:"text",
-                            title:"set volumn 100 hộ cái",
-                            payload:"volumn 100"
+                            title:"set volume 100 hộ cái",
+                            payload:"volume 100"
                         }
 
                     ]
