@@ -35,7 +35,7 @@ io.on("connection", function(client) {
     });
 });
 
-app.set("port", process.env.MESSENGER_PORT);
+app.set("port", process.env.MESSENGER_PORT || 5000);
 // Process application/x-www-form-urlencoded
 app.use(
     bodyParser.urlencoded({
@@ -54,9 +54,11 @@ app.get("/", function(req, res) {
 app.get("/youtube/", function(req, res) {
     res.sendFile("/youtube.html", { root: __dirname });
 });
+
 // app.get("/client-control/",function(req,res){
 //     res.sendFile("/control.html", { root: __dirname });
 // })
+
 app.post("/client-control/", function(req, res) {
     res.sendFile("/control.html", { root: __dirname });
 });
