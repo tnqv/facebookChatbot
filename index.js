@@ -2,14 +2,16 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const request = require("request");
-const app = express();
 const opn = require("opn");
 const vol = require("vol");
 const mongodb = require("mongodb");
 const sendMessage = require("./send_message.js");
 //----socket io
 const http = require("http").createServer(app);
-const io = require("socket.io").listen(http);
+const app = express();
+const server = app.listen(5001);
+const io = require("socket.io").listen(server);
+
 const fs = require("fs");
 
 const token = process.env.FB_PAGE_ACCESS_TOKEN;
@@ -298,8 +300,6 @@ function receivedPostback(event) {
 app.listen(app.get("port"), function() {
     console.log("running on port", app.get("port"));
 });
-
-http.listen(5001);
 
 function getFbName(senderID) {
     return new Promise((resolve, reject) => {
