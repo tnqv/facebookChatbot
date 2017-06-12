@@ -4,13 +4,13 @@ This instruction will walk you through necessary steps to host the bot from this
 
 ### Set up local server ###
 * Clone repo to local disk
-* Download [heroku](https://devcenter.heroku.com/articles/getting-started-with-nodejs#set-up)
-* Login using skylabmembers account
-* Go to this [link](https://developers.facebook.com/apps/1439594396111274/messenger/)
-(You need to register to be fb dev before continue to the app page)
-* In Token Generation section, copy the token for Skylab Music page
-* Add an enviroment variable to your local system: FB_PAGE_ACCESS_TOKEN: {token gotten from the link above}
-* From the repo folder, run `heroku local web` to start localhost
+* ~~Download [heroku](https://devcenter.heroku.com/articles/getting-started-with-nodejs#set-up)~~
+* ~~Login using skylabmembers account~~
+* ~~Go to this [link](https://developers.facebook.com/apps/1439594396111274/messenger/)
+(You need to register to be fb dev before continue to the app page)~~
+* ~~In Token Generation section, copy the token for Skylab Music page~~
+* ~~Add an environment variable to your local system: FB_PAGE_ACCESS_TOKEN: {token gotten from the link above}~~
+* From the repo folder, run ~~heroku local web~~ `node index.js` to start localhost
 * Open [http://localhost:5000](http://localhost:5000) to check if the server is running
 
 ### Setup ngrok ###
