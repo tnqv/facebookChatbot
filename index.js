@@ -8,8 +8,8 @@ const vol = require("vol");
 const mongodb = require("mongodb");
 const sendMessage = require("./send_message.js");
 //----socket io
-const http = require("http").createServer(app);
-const io = require("socket.io").listen(http);
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
 const fs = require("fs");
 
 const token = process.env.FB_PAGE_ACCESS_TOKEN;
@@ -35,7 +35,10 @@ io.on("connection", function(client) {
     });
 });
 
-app.set("port", process.env.PORT || 5000);
+server.listen(process.env.PORT || 5000, function() {
+    console.log("running on port", 5000);
+});
+
 // Process application/x-www-form-urlencoded
 app.use(
     bodyParser.urlencoded({
@@ -286,26 +289,6 @@ function receivedPostback(event) {
     // let them know it was successful
     sendMessage.sendTextMessage(senderID, "Postback called");
 }
-
-// function callSendAPIYoutube(messageData){
-//     request({
-
-//     },
-//         function(error,response,body){
-//             if(!error && response.statusCode == 200){
-//                 var recipientId = body.recipient_id;
-//                 var messageId = body.message_id;
-//             }
-//         }
-//     )
-// }
-
-// Spin up the server
-app.listen(app.get("port"), function() {
-    console.log("running on port", app.get("port"));
-});
-
-http.listen(5001);
 
 function getFbName(senderID) {
     return new Promise((resolve, reject) => {

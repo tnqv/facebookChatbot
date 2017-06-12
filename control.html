@@ -46,7 +46,7 @@
         var songPlaying;
         var player;
         var time_update_interval = 0;
-        var socket = io.connect("https://sky-lab-music-bot.herokuapp.com");
+        var socket = io.connect("/");
 
         function updateSource(url) {
             var audio = document.getElementById('mp3Source');
