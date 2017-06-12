@@ -15,28 +15,30 @@
 </body>
 </html>-->
 <html>
-    <head>
-         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    </head>
+
+<head>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+
 <body>
     <div id="react-root"></div>
     <textarea id="chat"></textarea>
     <br>
     <div id="video-placeholder"></div>
     <br>
-     <i id="mute-toggle" class="material-icons">volume_up</i>
+    <i id="mute-toggle" class="material-icons">volume_up</i>
 
     <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-     <input type="range" id="progress-bar" value="0">
-     <br>
-     <h2>Set volume</h2>
-            <input id="volume-input" type="number" max="100" min="0">
+    <input type="range" id="progress-bar" value="0">
+    <br>
+    <h2>Set volume</h2>
+    <input id="volume-input" type="number" max="100" min="0">
     <br>
     <audio id="audio" controls>
         Your browser does not support the audio element.
-         <source id="mp3Source" type="audio/mp3"></source>
+        <source id="mp3Source" type="audio/mp3"></source>
     </audio>
-    <script src="https://617713f2.ap.ngrok.io/socket.io/socket.io.js"></script>
+    <script src="https://sky-lab-music-bot.herokuapp.com/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -44,21 +46,22 @@
         var songPlaying;
         var player;
         var time_update_interval = 0;
-        var socket = io.connect("https://617713f2.ap.ngrok.io");
-         
-        function updateSource(url){ 
+        var socket = io.connect("https://sky-lab-music-bot.herokuapp.com");
+
+        function updateSource(url) {
             var audio = document.getElementById('mp3Source');
             audio.src = url;
             audio.load();
             audio.play();
         }
 
-        socket.on('connection', function(data) {
+        socket.on('connection', function (data) {
             console.log(data);
             initialize();
-                
+
         });
-         function onYouTubeIframeAPIReady() {
+
+        function onYouTubeIframeAPIReady() {
             player = new YT.Player('video-placeholder', {
                 width: 600,
                 height: 400,
@@ -71,7 +74,7 @@
             });
         }
 
-        function initialize(){
+        function initialize() {
 
             // Update the controls on load
             updateTimerDisplay();
@@ -89,65 +92,64 @@
 
         }
 
-        socket.on('messages', function(data){
+        socket.on('messages', function (data) {
             console.log(data);
-             $('#chat').append(data.msg + "<br/>");
+            $('#chat').append(data.msg + "<br/>");
         });
 
 
-        socket.on('songs',function(data){
+        socket.on('songs', function (data) {
             initialize();
-            if(data.videoType === 'mp3'){
+            if (data.videoType === 'mp3') {
                 updateSource(data.msg);
-            }else {
+            } else {
                 player.loadVideoById(data.msg);
             }
-            
-            
+
+
         });
 
-        socket.on('stop',function(data){
+        socket.on('stop', function (data) {
             player.pauseVideo();
         });
 
-        socket.on('mute',function(data){
+        socket.on('mute', function (data) {
             player.mute();
-             $('#mute-toggle').text('volume_off');
+            $('#mute-toggle').text('volume_off');
         });
 
-        socket.on('resume',function(data){
+        socket.on('resume', function (data) {
             player.playVideo();
         });
 
-        socket.on('unmute',function(data){
-            if(player.isMuted()){
+        socket.on('unmute', function (data) {
+            if (player.isMuted()) {
                 player.unMute();
-                 $('#mute-toggle').text('volume_up');
+                $('#mute-toggle').text('volume_up');
             }
         });
 
-        socket.on('setVolumn',function(data){
+        socket.on('setVolumn', function (data) {
             $('#volumn-input').val(data.volumnOption);
-             player.setVolume(parseInt(data.volumnOption));
+            player.setVolume(parseInt(data.volumnOption));
         });
 
         $('#volume-input').on('change', function () {
             player.setVolume($(this).val());
         });
-        
-        $('#mute-toggle').on('click', function() {
+
+        $('#mute-toggle').on('click', function () {
             var mute_toggle = $(this);
 
-            if(player.isMuted()){
+            if (player.isMuted()) {
                 player.unMute();
                 mute_toggle.text('volume_up');
-            }
-            else{
+            } else {
                 player.mute();
                 mute_toggle.text('volume_off');
             }
         });
-//Progress bar         
+        //Progress bar         
         $('#progress-bar').on('mouseup touchend', function (e) {
 
             // Calculate the new time for the video.
@@ -160,30 +162,30 @@
         });
 
         // This function is called by initialize()
-        function updateProgressBar(){
+        function updateProgressBar() {
             // Update the value of our progress bar accordingly.
             $('#progress-bar').val((player.getCurrentTime() / player.getDuration()) * 100);
         }
 
-//update duration time
-        function updateTimerDisplay(){
+        //update duration time
+        function updateTimerDisplay() {
             // Update current time text display.
-            $('#current-time').text(formatTime( player.getCurrentTime() ));
-            $('#duration').text(formatTime( player.getDuration() ));
+            $('#current-time').text(formatTime(player.getCurrentTime()));
+            $('#duration').text(formatTime(player.getDuration()));
         }
-        
-        function formatTime(time){
+
+        function formatTime(time) {
             time = Math.round(time);
 
             var minutes = Math.floor(time / 60),
-            seconds = time - minutes * 60;
+                seconds = time - minutes * 60;
 
             seconds = seconds < 10 ? '0' + seconds : seconds;
 
             return minutes + ":" + seconds;
         }
-      
-        </script>
+    </script>
 
 </body>
+
 </html>
