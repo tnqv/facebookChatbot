@@ -228,12 +228,12 @@ function receivedMessage(event) {
                     }
                 }
 
-                if (messageText.includes("set volumn")) {
+                if (messageText.includes("set volume")) {
                     let arrayMessage = new Array();
                     arrayMessage = messageText.split(" ");
-                    let volumnNumber = parseInt(arrayMessage[2]);
+                    let volumeNumber = parseInt(arrayMessage[2]);
                     if (socketClient != null) {
-                        socketClient.emit("setVolumn", { volumnOption: volumnNumber });
+                        socketClient.emit("setVolume", { volumeOption: volumeNumber });
                     }
                 }
 
@@ -242,7 +242,7 @@ function receivedMessage(event) {
                     case "generic":
                         sendMessage.sendGenericMessage(senderID);
                         break;
-                    case "volumn":
+                    case "volume":
                         sendMessage.sendQuickReplyMessage(senderID);
                         break;
                     default:

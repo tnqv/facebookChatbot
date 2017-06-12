@@ -129,9 +129,9 @@
             }
         });
 
-        socket.on('setVolumn', function (data) {
-            $('#volumn-input').val(data.volumnOption);
-            player.setVolume(parseInt(data.volumnOption));
+        socket.on('setVolume', function (data) {
+            $('#volume-input').val(data.volumeOption);
+            player.setVolume(parseInt(data.volumeOption));
         });
 
         $('#volume-input').on('change', function () {
