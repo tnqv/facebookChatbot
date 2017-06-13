@@ -49,8 +49,9 @@
         var socket = io.connect("/");
 
         function updateSource(url) {
-            var audio = document.getElementById('mp3Source');
-            audio.src = url;
+            var audio = document.getElementById("audio");
+            var audioSource = document.getElementById('mp3Source');
+            audioSource.src = url;
             audio.load();
             audio.play();
         }
@@ -100,7 +101,8 @@
 
         socket.on('songs', function (data) {
             initialize();
-            if (data.videoType === 'mp3') {
+            if (data.videoType === 'mp3' || data.videoType === 'nhaccuatui') {
+                console.log(data.msg);
                 updateSource(data.msg);
             } else {
                 player.loadVideoById(data.msg);

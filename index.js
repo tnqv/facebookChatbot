@@ -12,7 +12,11 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 const fs = require("fs");
 
-const token = process.env.FB_PAGE_ACCESS_TOKEN;
+const parseString = require('xml2js').parseString;
+
+const devMode = process.env.NODE_ENV;
+
+const token = devMode === 'development' ? process.env.FB_VUCUTE_PAGE_ACCESS_TOKEN : process.env.FB_PAGE_ACCESS_TOKEN;
 
 const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3";
 
@@ -58,13 +62,14 @@ app.get("/youtube/", function(req, res) {
     res.sendFile("/youtube.html", { root: __dirname });
 });
 
-// app.get("/client-control/",function(req,res){
-//     res.sendFile("/control.html", { root: __dirname });
-// })
+app.get("/client-control/",function(req,res){
+    res.sendFile("/control.html", { root: __dirname });
+});
 
 app.post("/client-control/", function(req, res) {
     res.sendFile("/control.html", { root: __dirname });
 });
+
 // for Facebook verification
 app.get("/webhook/", function(req, res) {
     if (
@@ -195,12 +200,48 @@ function receivedMessage(event) {
                 if (messageText.includes("mp3.zing.vn")) {
                     //opn(messageText, "music");
                     console.log("mp3 ne` hehehe", messageText);
-                    console.log(getMP3VideoId(messageText));
-                    if (socketClient != null) {
-                        socketClient.emit("songs", { msg: videoId, videoType: "mp3" });
-                    }
-                    sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
+                    getMP3VideoId(messageText,function(data){
+                        let urlReqAPI = API_ZING_MP3_GETLINK_URL + '{"id":"'+ data +'"}'
+                        request.get(urlReqAPI,function(error,response,body){
+                                if (!error && response.statusCode == 200) {
+                                    
+                                    let jsonObj = JSON.parse(body);
+                                    
+                                    //.source[ d'128']
+                                     if (socketClient != null) {
+                                        socketClient.emit("songs", { msg: jsonObj.source['128'], videoType: "zing" });
+                                    }
+                                    sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
+                                }
+                        });
+                    });
+
+                    // if (socketClient != null) {
+                    //     socketClient.emit("songs", { msg: videoId, videoType: "mp3" });
+                    // }
+                    
                     return;
+                }
+
+                if(messageText.includes("nhaccuatui.com")){
+                    getHTMLContentForNhacCuaTui(messageText,function(data){
+                         request.get(data, function (error, response, body) {
+                                if (!error && response.statusCode == 200) {
+                                    let csv = body;
+                                    parseString(csv, function (err, result) {
+                                        let link;
+                                        if (result.tracklist.track.length > 0) {
+                                            let track = result.tracklist.track[0];
+                                            let link = track.location[0];
+                                            
+                                             if (socketClient != null) {
+                                                socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
+                                             }
+                                        }                                    
+                                    });
+                                }
+                            });
+                    });
                 }
 
                 if (
@@ -290,6 +331,27 @@ function receivedPostback(event) {
     sendMessage.sendTextMessage(senderID, "Postback called");
 }
 
+function getHTMLContentForNhacCuaTui(url,cb){
+    request.get(url, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var csv = body;
+            // Continue with your processing here.
+            let splitHTML = csv.split("player.peConfig.xmlURL = ");
+            let splitHTMLForXmlPath = splitHTML[1].split('"');
+            // co mot. cai' rong^~ o? 0 nen phai lay' 1 nha
+            cb(splitHTMLForXmlPath[1]);
+
+            //const dom = new JSDOM(`<!DOCTYPE html><p>Hello world</p>`);
+           // console.log(dom.window.document.querySelector("p").textContent); 
+            //const $ = require('jQuery')(window);
+            //console.log("jsdom",dom);
+         //   test.window.document.addEventListener("DOMContentLoaded", function(event) {
+         //   });
+          
+        }
+    });
+}
+
 function getFbName(senderID) {
     return new Promise((resolve, reject) => {
         request(
@@ -325,9 +387,9 @@ function getYoutubeVideoId(url) {
     return match && match[7].length == 11 ? match[7] : false;
 }
 
-function getMP3VideoId(url) {
+function getMP3VideoId(url,callback) {
     let splitStrArrFromUrl = url.split("/");
     let secondSplit = splitStrArrFromUrl[5].split(".");
     console.log("url Zing", url);
-    return secondSplit[0] && secondSplit[0].length == 8 ? secondSplit[0] : false;
+    callback(secondSplit[0] && secondSplit[0].length == 8 ? secondSplit[0] : false);
 }

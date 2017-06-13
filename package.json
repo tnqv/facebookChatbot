@@ -6,8 +6,7 @@
     "node": "6.9.4"
   },
   "main": "index.js",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "https://git.heroku.com/sky-lab-music-bot.git"

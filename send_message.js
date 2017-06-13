@@ -1,9 +1,8 @@
 const request = require("request");
 
-const token =
-    process.env.FB_PAGE_ACCESS_TOKEN ||
-    "EAAUdTbCZA0aoBAIlqZAC87lacdfgWoFyySJhJJ9LEFbZA2paNyT2o5hLPtmwOI9hsyWQy8hXOLShPA2aN2WIn9yx4BuPv2y6cjmzZBzDZCWUKE0qUrcImiEptea7OGOpWZBm29R0cXApZBd0DFLu9ye8rZAzPA534ZAVW01dPBicICgZDZD";
+const devMode = process.env.NODE_ENV;
 
+const token = devMode === 'development' ? process.env.FB_VUCUTE_PAGE_ACCESS_TOKEN : process.env.FB_PAGE_ACCESS_TOKEN;
 
 function callSendAPI(messageData) {
     request({
