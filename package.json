@@ -25,6 +25,7 @@
     "request": "^2.81.0",
     "socket.io": "^2.0.3",
     "vol": "^2.1.1",
+    "xml2js": "^0.4.17",
     "youtube-audio-stream": "0.0.48",
     "youtube-node": "^1.3.0"
   }
