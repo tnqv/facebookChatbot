@@ -101,7 +101,7 @@
 
         socket.on('songs', function (data) {
             initialize();
-            if (data.videoType === 'mp3' || data.videoType === 'nhaccuatui') {
+            if (data.videoType === 'zing' || data.videoType === 'nhaccuatui') {
                 console.log(data.msg);
                 updateSource(data.msg);
             } else {

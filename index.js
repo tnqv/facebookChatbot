@@ -180,26 +180,27 @@ function receivedMessage(event) {
                 }
 
                 //Check & open youtube link
+                if(messageText.includes("youtube") || messageText.includes("youtu.be")){
+                    var videoId = getYoutubeVideoId(messageText);
+                    if (videoId) {
+                        // , "music"
+                        //opn(messageText, "music");
+                        // getYoutubeDuration(videoId);
+                        console.log("insert db", videoId);
+                        if (socketClient != null) {
+                            socketClient.emit("songs", { msg: videoId, videoType: "youtube" });
+                        }
 
-                var videoId = getYoutubeVideoId(messageText);
-                if (videoId) {
-                    // , "music"
-                    //opn(messageText, "music");
-                    // getYoutubeDuration(videoId);
-                    console.log("insert db", videoId);
-                    if (socketClient != null) {
-                        socketClient.emit("songs", { msg: videoId, videoType: "youtube" });
+                        //insertSongToDatabase(messageText);
+                        sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
+                        return;
                     }
-
-                    insertSongToDatabase(messageText);
-                    sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
-                    return;
                 }
+                
 
                 //Check & open zing mp3 link
                 if (messageText.includes("mp3.zing.vn")) {
                     //opn(messageText, "music");
-                    console.log("mp3 ne` hehehe", messageText);
                     getMP3VideoId(messageText,function(data){
                         let urlReqAPI = API_ZING_MP3_GETLINK_URL + '{"id":"'+ data +'"}'
                         request.get(urlReqAPI,function(error,response,body){
@@ -215,10 +216,6 @@ function receivedMessage(event) {
                                 }
                         });
                     });
-
-                    // if (socketClient != null) {
-                    //     socketClient.emit("songs", { msg: videoId, videoType: "mp3" });
-                    // }
                     
                     return;
                 }
