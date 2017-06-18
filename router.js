@@ -2,41 +2,43 @@ const receivedMsg = require("./receive_message.js");
 const socketIo = require("./socket_io_manager.js");
 const ds = require("./datasource.js");
 
+var express = require("express");
+var router = express.Router();
 
-module.exports = function(app,passport,io){
+var returnRouter = function(io) {
     let socketClient = null;
-    
-    socketIo.getSocketClient(io,function(data){
+
+    socketIo.getSocketClient(io, function(data) {
         socketClient = data;
     });
-    
+
     // Index route
-    app.get("/", function(req, res) {
+    router.get("/", function(req, res) {
         res.send("Hello world, I am a chat bot hihi");
     });
 
-    app.get("/youtube/", function(req, res) {
+    router.get("/youtube/", function(req, res) {
         res.sendFile("/youtube.html", { root: __dirname });
     });
 
-    app.get("/client-control/",function(req,res){
+    router.get("/client-control/", function(req, res) {
         res.sendFile("/views/control.html", { root: __dirname });
     });
 
-    app.post("/client-control/", function(req, res) {
+    router.post("/client-control/", function(req, res) {
         res.sendFile("/views/control.html", { root: __dirname });
     });
 
-    app.get("/login",function(req,res){
-        res.sendFile("/views/login.html",{root: __dirname});
+    router.get("/login", function(req, res) {
+        res.sendFile("/views/login.html", { root: __dirname });
     });
 
-    app.post("/login",function(req,res){
+    router.post("/login", function(req, res) {
         console.log(req.body.roomname);
         res.sendFile("/views/control.html", { root: __dirname });
     });
-// for Facebook verification
-    app.get("/webhook/", function(req, res) {
+    // for Facebook verification
+    router.get("/webhook/", function(req, res) {
         if (
             req.query["hub.mode"] === "subscribe" &&
             req.query["hub.verify_token"] === "my_voice_is_my_password_verify_me"
@@ -48,7 +50,7 @@ module.exports = function(app,passport,io){
         res.sendStatus(403);
     });
 
-    app.post("/webhook/", function(req, res) {
+    router.post("/webhook/", function(req, res) {
         var data = req.body;
 
         // Make sure this is a page subscription
@@ -62,7 +64,7 @@ module.exports = function(app,passport,io){
                 entry.messaging.forEach(function(event) {
                     if (event.message) {
                         console.log(entry.id);
-                        receivedMsg.receivedMessage(event,socketClient);
+                        receivedMsg.receivedMessage(event, socketClient);
                     } else if (event.postback) {
                         receivedMsg.receivedPostback(event);
                     } else {
@@ -80,15 +82,17 @@ module.exports = function(app,passport,io){
         res.sendStatus(200);
     });
 
+    return router;
 };
 
 function isAuthenticated(req, res, next) {
-
     // if user is authenticated in the session, carry on
-    if (req.isAuthenticated()){
+    if (req.isAuthenticated()) {
         return next();
     }
 
     // if they aren't redirect them to the home page
-    res.redirect('/');
+    res.redirect("/");
 }
+
+module.exports = returnRouter;
