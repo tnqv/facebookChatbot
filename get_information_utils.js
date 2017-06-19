@@ -43,11 +43,15 @@ module.exports =  {
          return match && match[7].length == 11 ? match[7] : false;
     },
     getMP3VideoId : function(url,callback){
+        try {
             let splitStrArrFromUrl = url.split("/");
             let secondSplit = splitStrArrFromUrl[5].split(".");
             console.log("url Zing", url);
             callback(secondSplit[0] && secondSplit[0].length == 8 ? secondSplit[0] : false);
-
+        }
+        catch(err){
+            callback(err);
+        }
     }, 
     getHTMLContentForNhacCuaTui : function(url,cb){
         request.get(url, function (error, response, body) {

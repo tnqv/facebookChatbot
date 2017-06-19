@@ -4,6 +4,35 @@ const get = require("./get_information_utils.js");
 const API_ZING_MP3_GETLINK_URL = "http://api.mp3.zing.vn/api/mobile/song/getsonginfo?requestdata=";
 const parseString = require('xml2js').parseString;
 const ds = require("./datasource.js");
+const socketIoManager = require("./socket_io_manager.js");
+
+function insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay){
+                if(videoType === "youtube"){
+                    ds.insertSongToDatabase(messageText,videoType,senderID);
+                }else{
+                    ds.insertSongToDatabase(messageText,"zing",senderID,videoUrlPlay);
+                    // if (socketClient != null) {
+                }
+}
+function emitMessageVideo(socketClient,videoId,videoType,videoUrlPlay,messageText,senderID){
+                         ds.countIfIsThereAnySong(function(data){
+                             
+                                if(data.length > 0){
+
+                                    insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay)
+                                }else{
+                                    insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay)
+                                    if (socketClient != null) {
+                                        if(videoType === "youtube"){
+                                            socketClient.emit("songs", { msg: videoId, videoType: videoType });
+                                        }else{
+                                            socketClient.emit("songs", { msg: videoUrlPlay, videoType: videoType });
+                                            
+                                        }
+                                    }
+                                }
+                        });
+}
 
 module.exports =  {
     receivedMessage : function(event,socketClient){
@@ -64,12 +93,15 @@ module.exports =  {
                         // , "music"
                         //opn(messageText, "music");
                         // getYoutubeDuration(videoId);
-                        ds.insertSongToDatabase(messageText,"youtube",senderID);
+                      
                         // if (socketClient != null) {
                         //     socketClient.emit("songs", { msg: videoId, videoType: "youtube" });
                         // }
 
                         //insertSongToDatabase(messageText);
+                        
+                        emitMessageVideo(socketClient,videoId,"youtube","",messageText,senderID);
+                     
                         sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
                         return;
                     }
@@ -90,10 +122,10 @@ module.exports =  {
                                         let jsonObj = JSON.parse(body);
                                         
                                         //.source[ d'128']
-                                        ds.insertSongToDatabase(messageText,"zing",senderID,jsonObj.source['128']);
-                                        // if (socketClient != null) {
+                                        
                                         //     socketClient.emit("songs", { msg: jsonObj.source['128'], videoType: "zing" });
                                         // }
+                                        emitMessageVideo(socketClient,messageText,"zing",jsonObj.source['128'],messageText,senderID);
                                         sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
                                     }
                             });
@@ -110,7 +142,8 @@ module.exports =  {
                                             if (result.tracklist.track.length > 0) {
                                                 let track = result.tracklist.track[0];
                                                 let link = track.location[0];
-                                                ds.insertSongToDatabase(messageText,"nhaccuatui",senderID,link.trim());
+                                                emitMessageVideo(socketClient,messageText,"nhaccuatui",link.trim(),messageText,senderID);
+                                                sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
                                                 // if (socketClient != null) {
                                                 //     socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
                                                 // }
@@ -122,6 +155,12 @@ module.exports =  {
                         });
                     }
 
+                    if(messageText.includes("skip this song")){
+                        if(socketClient != null){
+                            socketClient.emit("skip",{});
+                        }
+                        return;
+                    }
                     if(messageText.includes("current song")){
                         ds.findSongPlaying(function(data){
                             sendMessage.sendTextMessage(senderID,"Bài đang phát là : " + data[0].room_songs[0].song_name);

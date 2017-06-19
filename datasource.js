@@ -9,6 +9,8 @@ function connectToDatabase(callback){
      });
 }
 
+
+
 module.exports = {
     insertSongToDatabase : function(songUrl,songType,userReq,urlPlaySong){
          console.log("song url", songUrl);
@@ -25,7 +27,7 @@ module.exports = {
           });
          
     },
-    deleteSongWhenFinish : function(){
+    deleteSongWhenFinishPlaying : function(callback){
         connectToDatabase(function(db){
             db.collection("room").update({"room_identifier" : "skylab"},{"$pop":{"room_songs" : -1}},function(err,numAffected){
                 if(err){
@@ -35,7 +37,13 @@ module.exports = {
                 }
                 console.log("delete songs successful");
                db.close(); 
+               callback(numAffected);
             });
+        });
+    },
+    moveToPlayedSong : function(callback){
+        connectToDatabase(function(db){
+            
         });
     },
     findSongPlaying: function(callback){
@@ -53,12 +61,13 @@ module.exports = {
     },
     countIfIsThereAnySong: function(callback){
         connectToDatabase(function(db){
-            db.collection('room').find({'room_identifier':'skylab','room_songs.1':{$exists : true}}).toArray(function(err,results){
+            db.collection('room').find({'room_identifier':'skylab',room_songs:{$exists : true},$where:'this.room_songs.length > 0'}).toArray(function(err,results){
                 if(err){
                     console.log("Error db when getting count",err);
                     db.close();
                     return;
                 }
+                
                 callback(results);
                 db.close();
             });
