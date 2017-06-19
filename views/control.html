@@ -135,6 +135,18 @@
             }
         });
 
+        socket.on('skip',function(data){
+            if(player != null){
+                player.stopVideo();
+            }
+            if(audio!= null){
+                audio.pause();
+                audio.currentTime = 0;
+            }
+
+            socket.emit('finishSong',{});
+        });
+
         socket.on('setVolume', function (data) {
             $('#volume-input').val(data.volumeOption);
             player.setVolume(parseInt(data.volumeOption));
