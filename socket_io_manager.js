@@ -48,7 +48,7 @@ var finishSongFunc = (data,roomClient) => {
             let room = io.of('/' + roomIdentifier);
            
             //addSocketToMap(roomIdentifier,room);
-            // room.roomIdentifier = roomIdentifier;
+            room.roomIdentifier = roomIdentifier;
             room.on('connection',function(socket){
                 console.log("Client connected to ",roomIdentifier);
                 room.emit('messages',{msg:'joined room'});   
@@ -62,11 +62,12 @@ var finishSongFunc = (data,roomClient) => {
 const onConnection = (room) =>{
 
              room.on("songPlayingTime",function(data){        
-                   ds.updateTimeWhileSongPlaying(data.msg);
+                   ds.updateTimeWhileSongPlaying(room.roomIdentifier,data.msg);
              });
 
             room.on("songStart",function(data){
-                    ds.updateCurrentPlayingSong(data.msg);
+                console.log(data.msg);
+                    ds.updateCurrentPlayingSong(room.roomIdentifier,data.msg);
             });
             room.on("finishSong",function (data) {
                     console.log("get finishSong");

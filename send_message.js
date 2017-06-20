@@ -1,5 +1,6 @@
 const request = require("request");
 
+const ds = require("./datasource.js");
 const devMode = process.env.NODE_ENV;
 
 const token = devMode === 'development' ? process.env.FB_VUCUTE_PAGE_ACCESS_TOKEN : process.env.FB_PAGE_ACCESS_TOKEN;
@@ -33,7 +34,30 @@ function callSendAPI(messageData) {
 }
 
 module.exports =  {
-
+    sendQuickReplyMessageForRoomList : function(recipientId) { 
+             ds.getListRoomInDB((results)=>{
+                                let quick_replies =[];
+                                for (var r of results) {
+                                    let quick_replies_element={
+                                            content_type: "text",
+                                            title: "JOIN ROOM " + r.room_identifier,
+                                            payload: "join room"
+                                    };
+                                     quick_replies.push(quick_replies_element);
+                                } 
+                                var messageData = {
+                                    recipient: {
+                                        id: recipientId
+                                    },
+                                    message: {
+                                        text: "Chọn room",
+                                        quick_replies
+                                    }
+                                };
+                                callSendAPI(messageData);
+            });
+                
+     },
     sendQuickReplyMessage : function(recipientId,messageText) { 
                 var messageData = {
                 recipient: {

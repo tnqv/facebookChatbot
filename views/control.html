@@ -58,6 +58,7 @@
         var songPlaying;
         var player;
         var time_update_interval = 0;
+        
 
         $("#login").click(function(){
 
@@ -83,6 +84,20 @@
                         } else {
                             player.loadVideoById(data.msg.song_video_id);
                         }
+                        
+                        socket.emit("songStart",{msg:{"playingID" : data.msg.song_id,"playingTime":0}});
+
+                        setInterval (()=>{
+                            if ((Math.round(player.getCurrentTime()%15) == 0) && Math.round(player.getCurrentTime()) !=0){
+                                        socket.emit("songPlayingTime",{msg: player.getCurrentTime()});
+                            }
+                                
+                                
+
+                         
+                        },1000);
+
+
                     });
 
                     socket.on('stop', function (data) {

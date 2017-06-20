@@ -16,6 +16,21 @@ function connectToDatabase(callback){
 
 
 module.exports = {
+    insertUserToRoom : function(roomIdentifier,userId,callback){
+            connectToDatabase(function(db){
+                    db.collection("room").update({"room_identifier":roomIdentifier},{"$push":{"user_in_room":{"$each":[ userId ]}}},function(error,numAffected){
+                            if(error){
+                                console.log("InsertSong_error : ",err);
+                                db.close(); 
+                                return;
+                            }
+
+                                console.log("update user to room successful",numAffected.result);
+                                callback(numAffected);
+                                db.close(); 
+                            });
+            });
+    },
     insertSongToRoom : function(roomIdentifier,songId,songUrl,songType,userReq,urlPlaySong){
           connectToDatabase(function(db){
                 db.collection("room").update({"room_identifier" : roomIdentifier},{"$push": {"room_songs": { "$each": [ { "song_id" : songId ,"song_name" : songUrl, "song_type" : songType , "user_request" : userReq , "song_url_play" : urlPlaySong  }] } }},function(err,numAffected){
