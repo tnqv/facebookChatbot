@@ -11,7 +11,7 @@ var returnRouter = function(io) {
     socketIo.getSocketClient(io, function(data) {
         socketClient = data;
     });
-
+    socketIo.startSocketForAllRooms(io);
     // Index route
     router.get("/", function(req, res) {
         res.send("Hello world, I am a chat bot hihi");
@@ -64,7 +64,7 @@ var returnRouter = function(io) {
                 entry.messaging.forEach(function(event) {
                     if (event.message) {
                         console.log(entry.id);
-                        receivedMsg.receivedMessage(event, socketClient);
+                        receivedMsg.receivedMessage(event,io);
                     } else if (event.postback) {
                         receivedMsg.receivedPostback(event);
                     } else {

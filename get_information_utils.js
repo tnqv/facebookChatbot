@@ -39,8 +39,10 @@ module.exports =  {
     getYoutubeVideoId : function(url){
          var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
          var match = url.match(regExp);
-         console.log("url youtube", url);
          return match && match[7].length == 11 ? match[7] : false;
+    },
+    getNhacCuaTuiId : function(url,callback){
+
     },
     getMP3VideoId : function(url,callback){
         try {

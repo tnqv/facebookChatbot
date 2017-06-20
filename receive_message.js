@@ -5,37 +5,61 @@ const API_ZING_MP3_GETLINK_URL = "http://api.mp3.zing.vn/api/mobile/song/getsong
 const parseString = require('xml2js').parseString;
 const ds = require("./datasource.js");
 const socketIoManager = require("./socket_io_manager.js");
+//bấm previous -> load bài cuối cùng bên song played lên 
+// chuyển qua phần tử 1 -> songs 
+// songs sẽ lên 11 , song played sẽ bớt đi phần tử cuối 
+// tiếp tục previous -> songs lên 12 , songs played 
+function makeid()
+{
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay){
-                if(videoType === "youtube"){
-                    ds.insertSongToDatabase(messageText,videoType,senderID);
-                }else{
-                    ds.insertSongToDatabase(messageText,"zing",senderID,videoUrlPlay);
-                    // if (socketClient != null) {
-                }
+    for( var i=0; i < 5; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
 }
-function emitMessageVideo(socketClient,videoId,videoType,videoUrlPlay,messageText,senderID){
-                         ds.countIfIsThereAnySong(function(data){
+
+function insertSongToDatabaseHandler(roomIdentifier,messageText,songId,videoType,senderID,videoUrlPlay){
+    ds.getNumberOfSong('room_songs',function(data){
+         if(data[0].number_room_songs > 10){
+             sendMessage.sendTextMessage(senderID,"Full Queue mất tiu òi");
+             return;
+         }else{
+                if(videoType === "youtube"){
+                    ds.insertSongToRoom(roomIdentifier,songId,messageText,videoType,senderID);
+                    
+                }else{
+                    ds.insertSongToRoom(roomIdentifier,songId,messageText,videoType,senderID,videoUrlPlay);
+          }
+         }
+          
+    });
+               
+}
+
+function emitMessageVideo(socketClient,songId,videoId,videoType,videoUrlPlay,messageText,senderID){
+                         ds.countIfIsThereAnySong(socketClient.roomIdentifier,function(data){
                              
                                 if(data.length > 0){
-
-                                    insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay)
+                                    console.log("2");
+                                    insertSongToDatabaseHandler(socketClient.roomIdentifier,messageText,songId,videoType,senderID,videoUrlPlay);
+                                    
                                 }else{
-                                    insertSongToDatabaseHandler(messageText,videoType,senderID,videoUrlPlay)
+                                    console.log("1");
+                                    insertSongToDatabaseHandler(socketClient.roomIdentifier,messageText,songId,videoType,senderID,videoUrlPlay);
+                                    
                                     if (socketClient != null) {
-                                        if(videoType === "youtube"){
-                                            socketClient.emit("songs", { msg: videoId, videoType: videoType });
-                                        }else{
-                                            socketClient.emit("songs", { msg: videoUrlPlay, videoType: videoType });
-                                            
-                                        }
+                                        let videoObj =  { "song_id": songId , "song_type" : videoType, "song_url_play": videoUrlPlay , "song_video_id" : videoId  }; 
+                                        
+                                        socketClient.emit("songs",{msg : videoObj});
                                     }
                                 }
                         });
 }
 
 module.exports =  {
-    receivedMessage : function(event,socketClient){
+    receivedMessage : function(event,io){
         var senderID = event.sender.id;
         var recipientID = event.recipient.id;
         var timeOfMessage = event.timestamp;
@@ -87,145 +111,149 @@ module.exports =  {
                     }
                   
                     //Check & open youtube link
-                   
-                    var videoId = get.getYoutubeVideoId(messageText);
-                    if (videoId) {
-                        // , "music"
-                        //opn(messageText, "music");
-                        // getYoutubeDuration(videoId);
-                      
-                        // if (socketClient != null) {
-                        //     socketClient.emit("songs", { msg: videoId, videoType: "youtube" });
-                        // }
 
-                        //insertSongToDatabase(messageText);
-                        
-                        emitMessageVideo(socketClient,videoId,"youtube","",messageText,senderID);
-                     
-                        sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
-                        return;
-                    }
+                    //check if user has room ?
+                    ds.findPersonInRoom(senderID,(result)=>{
+                        // socketIoManager.userRoom
+                        if(result){
+                            let socketClient = io.of('/'+result[0].room_identifier);
+                            var songId;
+                            var videoId = get.getYoutubeVideoId(messageText);
+                            if (videoId) {
+                                // , "music"
+                                songId = "YOUTUBE"+makeid();
+                                emitMessageVideo(socketClient,songId,videoId,"youtube","",messageText,senderID);
+                            
+                                sendMessage.sendTextMessage(senderID, "Ô kê quẩy lên " + first_name + "!!");
+                                return;
+                            }
 
-                    // khi song finish -> emit xem coi con` co' song nao` ko => neu ko thi`im , neu co tiep tuc. play 
-                    // khi lan` dau` phat' thi` nhan. dc link se~ cho client biet la` co song de? phat'
-                    // speaker chcek coi nhac co' dang phat' k , neu ko thi` play , ko thi` ko lam` gi` ca
-                    
+                            // khi song finish -> emit xem coi con` co' song nao` ko => neu ko thi`im , neu co tiep tuc. play 
+                            // khi lan` dau` phat' thi` nhan. dc link se~ cho client biet la` co song de? phat'
+                            // speaker chcek coi nhac co' dang phat' k , neu ko thi` play , ko thi` ko lam` gi` ca
+                            
 
-                    //Check & open zing mp3 link
-                    if (messageText.includes("mp3.zing.vn")) {
-                        //opn(messageText, "music");
-                        get.getMP3VideoId(messageText,function(data){
-                            let urlReqAPI = API_ZING_MP3_GETLINK_URL + '{"id":"'+ data +'"}'
-                            request.get(urlReqAPI,function(error,response,body){
-                                    if (!error && response.statusCode == 200) {
-                                        
-                                        let jsonObj = JSON.parse(body);
-                                        
-                                        //.source[ d'128']
-                                        
-                                        //     socketClient.emit("songs", { msg: jsonObj.source['128'], videoType: "zing" });
-                                        // }
-                                        emitMessageVideo(socketClient,messageText,"zing",jsonObj.source['128'],messageText,senderID);
-                                        sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
-                                    }
-                            });
-                        });
-                        
-                        return;
-                    }
+                            //Check & open zing mp3 link
+                            if (messageText.includes("mp3.zing.vn")) {
+                                //opn(messageText, "music");
+                                songId = "MP3" + makeid();
+                                get.getMP3VideoId(messageText,function(data){
+                                    let urlReqAPI = API_ZING_MP3_GETLINK_URL + '{"id":"'+ data +'"}'
+                                    request.get(urlReqAPI,function(error,response,body){
+                                            if (!error && response.statusCode == 200) {
+                                                
+                                                let jsonObj = JSON.parse(body);
 
-                    if(messageText.includes("nhaccuatui.com")){
-                        get.getHTMLContentForNhacCuaTui(messageText,function(data){
-                            request.get(data, function (error, response, body) {
-                                    if (!error && response.statusCode == 200) {
-                                        parseString(body, function (err, result) {
-                                            if (result.tracklist.track.length > 0) {
-                                                let track = result.tracklist.track[0];
-                                                let link = track.location[0];
-                                                emitMessageVideo(socketClient,messageText,"nhaccuatui",link.trim(),messageText,senderID);
+                                                emitMessageVideo(socketClient,songId,messageText,"zing",jsonObj.source['128'],messageText,senderID);
+
                                                 sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
-                                                // if (socketClient != null) {
-                                                //     socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
-                                                // }
-                                                return;
-                                            }                                    
-                                        });
-                                    }
+                                            }
+                                    });
                                 });
-                        });
-                    }
+                                
+                                return;
+                            }
 
-                    if(messageText.includes("skip this song")){
-                        if(socketClient != null){
-                            socketClient.emit("skip",{});
+                            if(messageText.includes("nhaccuatui.com")){
+                                songId = "NHACCUATUI"+makeid();
+                                get.getHTMLContentForNhacCuaTui(messageText,function(data){
+                                    request.get(data, function (error, response, body) {
+                                            if (!error && response.statusCode == 200) {
+                                                parseString(body, function (err, result) {
+                                                    if (result.tracklist.track.length > 0) {
+                                                        let track = result.tracklist.track[0];
+                                                        let link = track.location[0];
+                                                        emitMessageVideo(socketClient,songId,messageText,"nhaccuatui",link.trim(),messageText,senderID);
+                                                        sendMessage.sendTextMessage(senderID, "Ô kê quẩy luôn " + first_name + "!!");
+                                                        // if (socketClient != null) {
+                                                        //     socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
+                                                        // }
+                                                        return;
+                                                    }                                    
+                                                });
+                                            }
+                                        });
+                                });
+                            }
+
+                            if(messageText.includes("skip this song")){
+                                if(socketClient != null){
+                                    console.log("skip this song",socketClient.roomIdentifier);
+                                    socketClient.emit("skip",{});
+                                }
+                                return;
+                            }
+                            if(messageText.includes("current song")){
+                                ds.findSongPlaying(function(data){
+                                    sendMessage.sendTextMessage(senderID,"Bài đang phát là : " + data[0].room_songs[0].song_name);
+                                });
+                                return;
+                            }
+
+                            if (
+                                messageText.includes("mute") ||
+                                messageText.includes("nín") ||
+                                messageText.includes("câm")
+                            ) {
+                                if (socketClient != null) {
+                                    socketClient.emit("mute", {});
+                                }
+                            }
+
+                            if (messageText.includes("unmute")) {
+                                if (socketClient != null) {
+                                    socketClient.emit("unmute", {});
+                                }
+                            }
+
+                            if (messageText.includes("dừng") || messageText.includes("pause")) {
+                                if (socketClient != null) {
+                                    socketClient.emit("pause", {});
+                                }
+                            }
+
+                            if (messageText.includes("stop")) {
+                                if (socketClient != null) {
+                                    socketClient.emit("stop", {});
+                                }
+                            }
+
+                            if (messageText.includes("resume")) {
+                                if (socketClient != null) {
+                                    socketClient.emit("resume", {});
+                                }
+                            }
+
+                            if (messageText.includes("set volume")) {
+                                let arrayMessage = new Array();
+                                arrayMessage = messageText.split(" ");
+                                let volumeNumber = parseInt(arrayMessage[2]);
+                                if (socketClient != null) {
+                                    socketClient.emit("setVolume", { volumeOption: volumeNumber });
+                                }
+                            }
+                              //Default text
+                            switch (messageText) {
+                                case "generic":
+                                    sendMessage.sendGenericMessage(senderID);
+                                    break;
+                                case "volume":
+                                    sendMessage.sendQuickReplyMessage(senderID);
+                                    break;
+                                default:
+                                    sendMessage.sendTextMessage(
+                                        senderID,
+                                        "Hong phải link youtube/zing mp3 ahihi " + first_name + " ngốc!"
+                                    );
+                                    break;
+                            }
+
+
                         }
-                        return;
-                    }
-                    if(messageText.includes("current song")){
-                        ds.findSongPlaying(function(data){
-                            sendMessage.sendTextMessage(senderID,"Bài đang phát là : " + data[0].room_songs[0].song_name);
-                        });
-                        return;
-                    }
-
-                    if (
-                        messageText.includes("mute") ||
-                        messageText.includes("nín") ||
-                        messageText.includes("câm")
-                    ) {
-                        if (socketClient != null) {
-                            socketClient.emit("mute", {});
-                        }
-                    }
-
-                    if (messageText.includes("unmute")) {
-                        if (socketClient != null) {
-                            socketClient.emit("unmute", {});
-                        }
-                    }
-
-                    if (messageText.includes("dừng") || messageText.includes("pause")) {
-                        if (socketClient != null) {
-                            socketClient.emit("pause", {});
-                        }
-                    }
-
-                    if (messageText.includes("stop")) {
-                        if (socketClient != null) {
-                            socketClient.emit("stop", {});
-                        }
-                    }
-
-                    if (messageText.includes("resume")) {
-                        if (socketClient != null) {
-                            socketClient.emit("resume", {});
-                        }
-                    }
-
-                    if (messageText.includes("set volume")) {
-                        let arrayMessage = new Array();
-                        arrayMessage = messageText.split(" ");
-                        let volumeNumber = parseInt(arrayMessage[2]);
-                        if (socketClient != null) {
-                            socketClient.emit("setVolume", { volumeOption: volumeNumber });
-                        }
-                    }
-
-                    //Default text
-                    switch (messageText) {
-                        case "generic":
-                            sendMessage.sendGenericMessage(senderID);
-                            break;
-                        case "volume":
-                            sendMessage.sendQuickReplyMessage(senderID);
-                            break;
-                        default:
-                            sendMessage.sendTextMessage(
-                                senderID,
-                                "Hong phải link youtube/zing mp3 ahihi " + first_name + " ngốc!"
-                            );
-                            break;
-                    }
+                    });
+                    
+                   
+                  
                 } else if (messageAttachments) {
                     // sendTextMessage(senderID, "Message with attachment received");
                 }

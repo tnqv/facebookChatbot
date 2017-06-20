@@ -22,6 +22,14 @@
 
 <body>
     <div id="react-root"></div>
+
+
+    Room name <input type="text" id="roomName"/>
+    <br>
+    Room password <input type="password" id="roomPassword"/>
+    <br>
+    <input type="button" id="login" value="Join Room"/>
+    <br>
     <textarea id="chat"></textarea>
     <br>
     <div id="video-placeholder"></div>
@@ -38,15 +46,109 @@
         Your browser does not support the audio element.
         <source id="mp3Source" type="audio/mp3"></source>
     </audio>
+
+    
+    
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-
+    
     <script>
         var songPlaying;
         var player;
         var time_update_interval = 0;
-        var socket = io.connect("/");
+
+        $("#login").click(function(){
+
+            var roomName = $("#roomName").val();
+            if(roomName){
+                     var socket = io.connect("/" + roomName);
+
+                    socket.on('connection', function (data) {
+                        console.log(data);
+                        initialize();
+                    });
+                   socket.on('messages', function (data) {
+                        console.log(data);
+                        $('#chat').append(data.msg + "<br/>");
+                    });
+
+
+                    socket.on('songs', function (data) {
+                        initialize();
+                        if (data.msg.videoType === 'zing' || data.msg.videoType === 'nhaccuatui') {
+                            console.log(data.msg.song_url_play);
+                            updateSource(data.msg.song_url_play);
+                        } else {
+                            player.loadVideoById(data.msg.song_video_id);
+                        }
+                    });
+
+                    socket.on('stop', function (data) {
+                        player.stopVideo();
+                    });
+
+                    socket.on('pause', function (data) {
+                        player.pauseVideo();
+                    });
+
+                    socket.on('mute', function (data) {
+                        player.mute();
+                        $('#mute-toggle').text('volume_off');
+                    });
+
+                    socket.on('resume', function (data) {
+                        player.playVideo();
+                    });
+
+                    socket.on('unmute', function (data) {
+                        if (player.isMuted()) {
+                            player.unMute();
+                            $('#mute-toggle').text('volume_up');
+                        }
+                    });
+
+                    socket.on('skip',function(data){
+                        if(player != null){
+                            player.stopVideo();
+                        }
+                        if(audio!= null){
+                            audio.pause();
+                            audio.currentTime = 0;
+                        }
+                        console.log("skip",data);
+                        socket.emit('finishSong',{});
+                    });
+
+                    socket.on('setVolume', function (data) {
+                        $('#volume-input').val(data.volumeOption);
+                        player.setVolume(parseInt(data.volumeOption));
+                    });
+
+
+            }
+            
+        });
+       
+       function onPlayerStateChange(event) {  
+                
+            if(event.data === 0) {
+                if(socket != null){
+                    console.log("emit finishSong");
+                    socket.emit('finishSong',{});
+                }
+            }
+        }
+
+         audio.addEventListener("ended", function(){
+          
+            if(socket != null){
+                    console.log("emit finishSong");
+                    socket.emit('finishSong',{});
+                }
+         });
+
 
         function updateSource(url) {
             var audio = document.getElementById("audio");
@@ -56,11 +158,7 @@
             audio.play();
         }
 
-        socket.on('connection', function (data) {
-            console.log(data);
-            initialize();
-
-        });
+      
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('video-placeholder', {
@@ -70,7 +168,8 @@
                     color: 'white',
                 },
                 events: {
-                    onReady: initialize
+                    onReady: initialize,
+                    onPlayerStateChange : onPlayerStateChange
                 }
             });
         }
@@ -93,65 +192,7 @@
 
         }
 
-        socket.on('messages', function (data) {
-            console.log(data);
-            $('#chat').append(data.msg + "<br/>");
-        });
-
-
-        socket.on('songs', function (data) {
-            initialize();
-            if (data.videoType === 'zing' || data.videoType === 'nhaccuatui') {
-                console.log(data.msg);
-                updateSource(data.msg);
-            } else {
-                player.loadVideoById(data.msg);
-            }
-
-
-        });
-
-        socket.on('stop', function (data) {
-            player.stopVideo();
-        });
-
-        socket.on('pause', function (data) {
-            player.pauseVideo();
-        });
-
-        socket.on('mute', function (data) {
-            player.mute();
-            $('#mute-toggle').text('volume_off');
-        });
-
-        socket.on('resume', function (data) {
-            player.playVideo();
-        });
-
-        socket.on('unmute', function (data) {
-            if (player.isMuted()) {
-                player.unMute();
-                $('#mute-toggle').text('volume_up');
-            }
-        });
-
-        socket.on('skip',function(data){
-            if(player != null){
-                player.stopVideo();
-            }
-            if(audio!= null){
-                audio.pause();
-                audio.currentTime = 0;
-            }
-
-            socket.emit('finishSong',{});
-        });
-
-        socket.on('setVolume', function (data) {
-            $('#volume-input').val(data.volumeOption);
-            player.setVolume(parseInt(data.volumeOption));
-        });
-
+      
         $('#volume-input').on('change', function () {
             player.setVolume($(this).val());
         });
