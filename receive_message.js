@@ -7,13 +7,18 @@ const ds = require("./datasource.js");
 const socketIoManager = require("./socket_io_manager.js");
 
 const BEGIN = 0;
-const SELECT_ROOM = 1;
+const PRE_SELECT_ROOM = 1;
+const SELECT_ROOM = 2;
 const CHECK_PASSWORD = 3;
-const READY = 100;
+const CREATE_ROOM = 4;
+const INPUT_PASSWORD_FOR_ROOM = 5;
+const READY = 10;
 // begin ( chat cau dau`) -> chua co room ( SELECT ROOM ) -> nhapp pass word (CHECK PASSWORD) -> vao room thanh` cong (READY)
 let stateFlow = 1;
 
-let userSelectedRoom = {  }; // temp
+let userState = {}; // temp
+let userSelectedRoom = {};
+let userCreatedRoom = {};
 //"123": { currentState: 0 }
 // bấm previous -> load bài cuối cùng bên song played lên
 // chuyển qua phần tử 1 -> songs
@@ -64,14 +69,15 @@ function emitMessageVideo(
     videoType,
     videoUrlPlay,
     messageText,
-    senderID
+    senderID,
+    roomName
 ) {
-    console.log(socketClient.roomIdentifier);
-    ds.countIfIsThereAnySong(socketClient.roomIdentifier, function(data) {
+    console.log("room cleint",socketClient);
+    ds.countIfIsThereAnySong(roomName, function(data) {
         if (data.length > 0) {
             console.log("2");
             insertSongToDatabaseHandler(
-                socketClient.roomIdentifier,
+                roomName,
                 messageText,
                 songId,
                 videoType,
@@ -81,7 +87,7 @@ function emitMessageVideo(
         } else {
             console.log("1");
             insertSongToDatabaseHandler(
-                socketClient.roomIdentifier,
+                roomName,
                 messageText,
                 songId,
                 videoType,
@@ -110,17 +116,6 @@ module.exports = {
         var timeOfMessage = event.timestamp;
         var message = event.message;
 
-        if (!userSelectedRoom["" + senderID]) {
-            userSelectedRoom["" + senderID] = { currentState: BEGIN };
-        }
-
-        const state = userSelectedRoom["" + senderID];
-
-        switch (state.currentState) {
-            case BEGIN:
-                break;
-        }
-
         console.log(
             "Received message for user %d and page %d at %d with message:",
             senderID,
@@ -130,257 +125,344 @@ module.exports = {
         console.log(JSON.stringify(message));
 
         var messageId = message.mid;
-
         var messageText = message.text;
         var messageAttachments = message.attachments;
 
-        getInfoForUrl.getFbName(senderID)
-            .then(first_name => {
-                if (messageText) {
-                    // Set nickname
-                    switch (senderID) {
-                        case "1176661302462412":
-                            first_name = "Bà già xài Zalo";
-                            break;
-                        case "1370107956411784":
-                            first_name = "Zú";
-                            break;
-                        case "738286506296286":
-                            first_name = "Chị Đại";
-                            break;
-                        case "1067670383333151":
-                            first_name = "Tuấn Trẻ Trâu";
-                            break;
-                        case "1447875711972194":
-                            first_name = "a Việt";
-                            break;
-                        case "1843143285699478":
-                            first_name = "admin";
-                            break;
-                        case "1218099261649369":
-                            first_name = "Cu Tũn";
-                            break;
-                        case "1434187019953992":
-                            first_name = "Hoàng";
-                            break;
-                        default:
-                            break;
-                    }
 
-                    //Check & open youtube link
+        if (!userState["" + senderID]) {
+            userState["" + senderID] = { currentState: BEGIN };
+        }
 
-                    //check if user has room ?
-                    ds.findPersonInRoom(senderID, result => {
-                        // socketIoManager.userRoom
-                        if (result.length > 0) {
-                            let socketClient = io.of("/" + result[0].room_identifier);
-                            var songId;
-                            var videoId = get.getYoutubeVideoId(messageText);
-                            if (videoId) {
-                                // , "music"
-                                songId = "YOUTUBE" + makeid();
-                                emitMessageVideo(
-                                    socketClient,
-                                    songId,
-                                    videoId,
-                                    "youtube",
-                                    "",
-                                    messageText,
-                                    senderID
-                                );
-
-                                sendMessage.sendTextMessage(
-                                    senderID,
-                                    "Ô kê quẩy lên " + first_name + "!!"
-                                );
-                                return;
+        const state = userState["" + senderID];
+        console.log("user now in server",userState);
+        console.log("state",state);
+        switch (state.currentState) {
+            case BEGIN:
+                
+                if(messageText.includes("Use skylab music")){
+                      userState[""+senderID] = {currentState :PRE_SELECT_ROOM};
+                      sendMessage.sendTextMessage(senderID,"skylab music đã chấp nhận lời yêu cầu của bạn !");
+                     
+                }else sendMessage.sendTextMessage(senderID,"Chào mừng bạn đến với skylab music chat bot , ... getting started ... (Nhập 'Use skylab music' )");
+                break;   
+            case PRE_SELECT_ROOM:
+                 
+                 if(messageText.includes("OK")){
+                         userState[""+ senderID] = { currentState: SELECT_ROOM};
+                         sendMessage.sendQuickReplyMessageForRoomList(senderID);
+                 }else if(messageText.includes("CREATE ROOM")){
+                        userState[""+senderID] = {currentState : CREATE_ROOM};
+                        sendMessage.sendTextMessage(senderID,"Bạn đã chọn tính năng tạo phòng !");
+                 }else  sendMessage.sendTextMessage(senderID,"Hiện tại bạn chưa có phòng để điều khiển , bạn muốn chọn phòng chứ ? ( Nhập 'OK' )");
+                break;
+            case CREATE_ROOM:
+                let patt = /CREATE ROOM ([0-9a-zA-Z]+)/i;
+                if(patt.exec(messageText) != null){
+                    let roomCreateName = patt.exec(messageText)[1];
+                    userState[""+senderID] = {currentState : INPUT_PASSWORD_FOR_ROOM};
+                    userCreatedRoom[""+senderID] = roomCreateName;
+                    sendMessage.sendTextMessage(senderID,"OK , nhập tiếp password cho room nhé");
+                }else sendMessage.sendTextMessage(senderID,"Lệnh tạo room không hợp lệ 'CREATE ROOM {tên room}'");
+                // if(messageText.match("CREATE ROOM ([0-9a-zA-Z]+)")){
+                //     let roomName = messageText.replace("CREATE ROOM ","");
+                //     console.log("room Name create",roomName);
+                // }
+                break; 
+            case INPUT_PASSWORD_FOR_ROOM:
+                if(messageText){
+                        ds.getListRoomInDB((result)=>{
+                            let hadRoom = false;
+                            for(var r of result){
+                                if(userCreatedRoom[""+senderID] === r.room_identifier){
+                                            hadRoom = true;
+                                }
                             }
-
-                            // khi song finish -> emit xem coi con` co' song nao` ko => neu ko thi`im , neu co tiep tuc. play
-                            // khi lan` dau` phat' thi` nhan. dc link se~ cho client biet la` co song de? phat'
-                            // speaker chcek coi nhac co' dang phat' k , neu ko thi` play , ko thi` ko lam` gi` ca
-
-                            //Check & open zing mp3 link
-                            if (messageText.includes("mp3.zing.vn")) {
-                                //opn(messageText, "music");
-                                songId = "MP3" + makeid();
-                                get.getMP3VideoId(messageText, function(data) {
-                                    let urlReqAPI =
-                                        API_ZING_MP3_GETLINK_URL + '{"id":"' + data + '"}';
-                                    request.get(urlReqAPI, function(error, response, body) {
-                                        if (!error && response.statusCode == 200) {
-                                            let jsonObj = JSON.parse(body);
-
-                                            emitMessageVideo(
-                                                socketClient,
-                                                songId,
-                                                messageText,
-                                                "zing",
-                                                jsonObj.source["128"],
-                                                messageText,
-                                                senderID
-                                            );
-
-                                            sendMessage.sendTextMessage(
-                                                senderID,
-                                                "Ô kê quẩy luôn " + first_name + "!!"
-                                            );
-                                        }
-                                    });
+                            if(hadRoom) {
+                                sendMessage.sendTextMessage(senderID,"Room nay da ton tai");
+                            }else {
+                                let dataRoom = { "roomName" : userCreatedRoom[""+senderID], "roomPassword" : messageText, "userID" : senderID }
+                                ds.createMoreRoom(dataRoom,(result)=>{
+                                        sendMessage.sendTextMessage(senderID,"Ok tạo room cho bạn rồi đó");  
+                                        userState[""+senderID] = {currentState:PRE_SELECT_ROOM};
+                                        socketIoManager.startSocketForRoomName(userCreatedRoom[""+senderID]);
                                 });
+                                
+                            } 
+                        });
+                }
+                break;
+            case SELECT_ROOM:
 
-                                return;
+                if (messageText.includes("JOIN ROOM ")) {
+                                let roomName = messageText.replace("JOIN ROOM ", "");
+                                let choosedRoom = false;
+                                if(roomName){
+                                    ds.getListRoomInDB((result)=>{
+                                        for(var r of result){
+                                            if(roomName === r.room_identifier){
+                                                     userSelectedRoom["" + senderID] = roomName;
+                                                     userState["" + senderID] = {currentState:CHECK_PASSWORD};
+                                                     choosedRoom = true;
+                                            }
+                                        }
+                                        if(!choosedRoom) {
+                                            sendMessage.sendTextMessage(senderID,"Room không hợp lệ");
+                                        }else sendMessage.sendTextMessage(senderID,"Nhập mật khẩu phòng nha");   
+                                    });
+                                }
+                }else sendMessage.sendTextMessage(senderID,"Xin hãy chọn phòng ( bằng cú pháp 'JOIN ROOM {tên phòng}')");
+                break;
+            case CHECK_PASSWORD:
+               // sendMessage.sendTextMessage(senderID, "Nhập mật khẩu của phòng !");
+                if(messageText){
+                    let data = {"roomIdentifier" : userSelectedRoom[""+senderID] ,"roomPassword" : messageText};
+                    ds.authenticateRoomNameAndPassword(data,(result)=>{
+                            if(result.length > 0){
+                                userState[""+senderID] = {currentState:READY};
+                                sendMessage.sendTextMessage(senderID,"OK , đúng mật khẩu dòi , gửi link youtube , mp3 , nhaccuatui để quẩy nhen ^^!")
+                            }else sendMessage.sendTextMessage(senderID,"Sai mật khẩu phòng");
+                    });
+                }
+                break;
+            case READY:
+                getInfoForUrl.getFbName(senderID)
+                    .then(first_name => {
+                        if (messageText) {
+                            // Set nickname
+                            switch (senderID) {
+                                case "1176661302462412":
+                                    first_name = "Bà già xài Zalo";
+                                    break;
+                                case "1370107956411784":
+                                    first_name = "Zú";
+                                    break;
+                                case "738286506296286":
+                                    first_name = "Chị Đại";
+                                    break;
+                                case "1067670383333151":
+                                    first_name = "Tuấn Trẻ Trâu";
+                                    break;
+                                case "1447875711972194":
+                                    first_name = "a Việt";
+                                    break;
+                                case "1843143285699478":
+                                    first_name = "admin";
+                                    break;
+                                case "1218099261649369":
+                                    first_name = "Cu Tũn";
+                                    break;
+                                case "1434187019953992":
+                                    first_name = "Hoàng";
+                                    break;
+                                default:
+                                    break;
                             }
 
-                            if (messageText.includes("nhaccuatui.com")) {
-                                songId = "NHACCUATUI" + makeid();
-                                get.getHTMLContentForNhacCuaTui(messageText, function(data) {
-                                    request.get(data, function(error, response, body) {
-                                        if (!error && response.statusCode == 200) {
-                                            parseString(body, function(err, result) {
-                                                if (result.tracklist.track.length > 0) {
-                                                    let track = result.tracklist.track[0];
-                                                    let link = track.location[0];
+                            //Check & open youtube link
+
+                              let socketClient = io.of("/" + userSelectedRoom[""+senderID]);
+                                    if(!socketClient){
+                                        console.log("No router connection socket");
+                                        return;
+                                    }
+                                    var songId;
+                                    var videoId = getInfoForUrl.getYoutubeVideoId(messageText);
+                                    if (videoId) {
+                                        // , "music"
+                                        songId = "YOUTUBE" + makeid();
+                                        emitMessageVideo(
+                                            socketClient,
+                                            songId,
+                                            videoId,
+                                            "youtube",
+                                            "",
+                                            messageText,
+                                            senderID,
+                                            userSelectedRoom[""+senderID]
+                                        );
+
+                                        sendMessage.sendTextMessage(
+                                            senderID,
+                                            "Ô kê quẩy lên " + first_name + "!!"
+                                        );
+                                        return;
+                                    }
+
+                                    // khi song finish -> emit xem coi con` co' song nao` ko => neu ko thi`im , neu co tiep tuc. play
+                                    // khi lan` dau` phat' thi` nhan. dc link se~ cho client biet la` co song de? phat'
+                                    // speaker chcek coi nhac co' dang phat' k , neu ko thi` play , ko thi` ko lam` gi` ca
+
+                                    //Check & open zing mp3 link
+                                    if (messageText.includes("mp3.zing.vn")) {
+                                        //opn(messageText, "music");
+                                        songId = "MP3" + makeid();
+                                        getInfoForUrl.getMP3VideoId(messageText, function(data) {
+                                            let urlReqAPI =
+                                                API_ZING_MP3_GETLINK_URL + '{"id":"' + data + '"}';
+                                            request.get(urlReqAPI, function(error, response, body) {
+                                                if (!error && response.statusCode == 200) {
+                                                    let jsonObj = JSON.parse(body);
+
                                                     emitMessageVideo(
                                                         socketClient,
                                                         songId,
                                                         messageText,
-                                                        "nhaccuatui",
-                                                        link.trim(),
+                                                        "zing",
+                                                        jsonObj.source["128"],
                                                         messageText,
-                                                        senderID
+                                                        senderID,
+                                                        userSelectedRoom[""+senderID]
                                                     );
+
                                                     sendMessage.sendTextMessage(
                                                         senderID,
                                                         "Ô kê quẩy luôn " + first_name + "!!"
                                                     );
-                                                    // if (socketClient != null) {
-                                                    //     socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
-                                                    // }
-                                                    return;
                                                 }
                                             });
-                                        }
-                                    });
-                                });
-                            }
+                                        });
 
-                            if (messageText.includes("skip this song")) {
-                                if (socketClient != null) {
-                                    console.log("skip this song", socketClient.roomIdentifier);
-                                    socketClient.emit("skip", {});
-                                }
-                                return;
-                            }
-                            if (messageText.includes("current song")) {
-                                ds.findSongPlaying(function(data) {
-                                    sendMessage.sendTextMessage(
-                                        senderID,
-                                        "Bài đang phát là : " + data[0].room_songs[0].song_name
-                                    );
-                                });
-                                return;
-                            }
-
-                            if (
-                                messageText.includes("mute") ||
-                                messageText.includes("nín") ||
-                                messageText.includes("câm")
-                            ) {
-                                if (socketClient != null) {
-                                    socketClient.emit("mute", {});
-                                }
-                                return;
-                            }
-
-                            if (messageText.includes("unmute")) {
-                                if (socketClient != null) {
-                                    socketClient.emit("unmute", {});
-                                }
-                                return;
-                            }
-
-                            if (messageText.includes("dừng") || messageText.includes("pause")) {
-                                if (socketClient != null) {
-                                    socketClient.emit("pause", {});
-                                }
-                                return;
-                            }
-
-                            if (messageText.includes("stop")) {
-                                if (socketClient != null) {
-                                    socketClient.emit("stop", {});
-                                }
-                                return;
-                            }
-
-                            if (messageText.includes("resume")) {
-                                if (socketClient != null) {
-                                    socketClient.emit("resume", {});
-                                }
-                                return;
-                            }
-
-                            if (messageText.includes("set volume")) {
-                                let arrayMessage = new Array();
-                                arrayMessage = messageText.split(" ");
-                                let volumeNumber = parseInt(arrayMessage[2]);
-                                if (socketClient != null) {
-                                    socketClient.emit("setVolume", { volumeOption: volumeNumber });
-                                }
-                                return;
-                            }
-                            //Default text
-                            switch (messageText) {
-                                case "generic":
-                                    sendMessage.sendGenericMessage(senderID);
-                                    break;
-                                case "volume":
-                                    sendMessage.sendQuickReplyMessage(senderID);
-                                    break;
-                                default:
-                                    sendMessage.sendTextMessage(
-                                        senderID,
-                                        "Hong phải link youtube/zing mp3 ahihi " +
-                                            first_name +
-                                            " ngốc!"
-                                    );
-                                    break;
-                            }
-                        } else {
-                            if (messageText === "OK") {
-                                sendMessage.sendQuickReplyMessageForRoomList(senderID);
-                                return;
-                            } else if (messageText.includes("JOIN ROOM ")) {
-                                sendMessage.sendTextMessage(senderID, "Nhập mật khẩu của phòng !");
-
-                                let roomName = messageText.replace("JOIN ROOM ", "");
-                                userSelectedRoom["" + senderID] = roomName;
-                            } else if (messageText.includes("pass:")) {
-                                let roomName = userSelectedRoom["" + senderID]
-                                    ? userSelectedRoom["" + senderID]
-                                    : "skylab";
-
-                                ds.insertUserToRoom(roomName, senderID, numAffected => {
-                                    if (numAffected) {
-                                        sendMessage.sendTextMessage(senderID, "Ok bạn đã vào phòng");
                                         return;
                                     }
-                                });
-                            } else {
-                                sendMessage.sendTextMessage(
-                                    senderID,
-                                    "Hiện tại bạn chưa có phòng để điều khiển , bạn muốn chọn phòng chứ ? Hay tạo phòng"
-                                );
-                                return;
-                            }
+
+                                    if (messageText.includes("nhaccuatui.com")) {
+                                        songId = "NHACCUATUI" + makeid();
+                                        getInfoForUrl.getHTMLContentForNhacCuaTui(messageText, function(data) {
+                                            request.get(data, function(error, response, body) {
+                                                if (!error && response.statusCode == 200) {
+                                                    parseString(body, function(err, result) {
+                                                        if (result.tracklist.track.length > 0) {
+                                                            let track = result.tracklist.track[0];
+                                                            let link = track.location[0];
+                                                            emitMessageVideo(
+                                                                socketClient,
+                                                                songId,
+                                                                messageText,
+                                                                "nhaccuatui",
+                                                                link.trim(),
+                                                                messageText,
+                                                                senderID,
+                                                                userSelectedRoom[""+senderID]
+                                                            );
+                                                            sendMessage.sendTextMessage(
+                                                                senderID,
+                                                                "Ô kê quẩy luôn " + first_name + "!!"
+                                                            );
+                                                            // if (socketClient != null) {
+                                                            //     socketClient.emit("songs", { msg: link.trim(), videoType: "nhaccuatui" });
+                                                            // }
+                                                            return;
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        });
+                                    }
+
+                                    if (messageText.includes("skip this song")) {
+                                        if (socketClient != null) {
+                                          //  console.log("skip this song", socketClient.roomIdentifier);
+                                            socketClient.emit("skip", {});
+                                        }
+                                        return;
+                                    }
+                                    if (messageText.includes("current song")) {
+                                        ds.findSongPlaying(userSelectedRoom[""+senderID],function(data) {
+                                            sendMessage.sendTextMessage(
+                                                senderID,
+                                                "Bài đang phát là : " + data[0].room_songs[0].song_name
+                                            );
+                                        });
+                                        return;
+                                    }
+
+                                    if (
+                                        messageText.includes("mute") ||
+                                        messageText.includes("nín") ||
+                                        messageText.includes("câm")
+                                    ) {
+                                        if (socketClient != null) {
+                                            socketClient.emit("mute", {});
+                                        }
+                                        return;
+                                    }
+
+                                    if (messageText.includes("unmute") || messageText.includes("giải câm")) {
+                                        if (socketClient != null) {
+                                            socketClient.emit("unmutete", {});
+                                        }
+                                        return;
+                                    }
+
+                                    if (messageText.includes("dừng") || messageText.includes("pause")) {
+                                        if (socketClient != null) {
+                                            socketClient.emit("pause", {});
+                                        }
+                                        return;
+                                    }
+
+                                    if (messageText.includes("stop")) {
+                                        if (socketClient != null) {
+                                            socketClient.emit("stop", {});
+                                        }
+                                        return;
+                                    }
+
+                                    if (messageText.includes("resume")) {
+                                        if (socketClient != null) {
+                                            socketClient.emit("resume", {});
+                                        }
+                                        return;
+                                    }
+
+                                    if (messageText.includes("set volume")) {
+                                        let arrayMessage = new Array();
+                                        arrayMessage = messageText.split(" ");
+                                        let volumeNumber = parseInt(arrayMessage[2]);
+                                        if (socketClient != null) {
+                                            socketClient.emit("setVolume", { volumeOption: volumeNumber });
+                                        }
+                                        return;
+                                    }
+                                    //Default text
+                                    switch (messageText) {
+                                        case "generic":
+                                            sendMessage.sendGenericMessage(senderID);
+                                            break;
+                                        case "volume":
+                                            sendMessage.sendQuickReplyMessage(senderID);
+                                            break;
+                                        default:
+                                            sendMessage.sendTextMessage(
+                                                senderID,
+                                                "Hong phải link youtube/zing mp3 ahihi " +
+                                                    first_name +
+                                                    " ngốc!"
+                                            );
+                                            break;
+                                    }
+
+
+                            //Check user has room
+                            // ds.findPersonInRoom(senderID, result => {
+                            //     // socketIoManager.userRoom
+                            //     if (result.length > 0) {
+                                    
+                            //     } else {
+                                    
+                            //     }
+                            // });
+                        } else if (messageAttachments) {
+                            // sendTextMessage(senderID, "Message with attachment received");
                         }
-                    });
-                } else if (messageAttachments) {
-                    // sendTextMessage(senderID, "Message with attachment received");
-                }
-            })
-            .catch(err => console.log(err));
+                    })
+                    .catch(err => console.log(err));
+                break;
+            
+        }
+
+
+        
     },
     receivedPostback: function(event) {
         var senderID = event.sender.id;

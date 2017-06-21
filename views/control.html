@@ -63,12 +63,18 @@
         $("#login").click(function(){
 
             var roomName = $("#roomName").val();
+            var roomPassword = $("#roomPassword").val();
             if(roomName){
                      var socket = io.connect("/" + roomName);
-
+                     socket.on('connect', function(){
+                           socket.emit("authenticate",{"roomIdentifier" : roomName,"roomPassword" : roomPassword});
+                     });
+                                          
                     socket.on('connection', function (data) {
                         console.log(data);
+
                         initialize();
+
                     });
                    socket.on('messages', function (data) {
                         console.log(data);
@@ -78,7 +84,7 @@
 
                     socket.on('songs', function (data) {
                         initialize();
-                        if (data.msg.videoType === 'zing' || data.msg.videoType === 'nhaccuatui') {
+                        if (data.msg.song_type === 'zing' || data.msg.song_type === 'nhaccuatui') {
                             console.log(data.msg.song_url_play);
                             updateSource(data.msg.song_url_play);
                         } else {
@@ -101,23 +107,30 @@
                     });
 
                     socket.on('stop', function (data) {
-                        player.stopVideo();
+                            player.stopVideo();
+                            audio.pause();
+                            audio.currentTime = 0;
+                        
                     });
 
                     socket.on('pause', function (data) {
                         player.pauseVideo();
+                          audio.pause();
                     });
 
                     socket.on('mute', function (data) {
                         player.mute();
                         $('#mute-toggle').text('volume_off');
+                        audio.muted = true;
                     });
 
                     socket.on('resume', function (data) {
                         player.playVideo();
+                        audio.play();
                     });
 
-                    socket.on('unmute', function (data) {
+                    socket.on('unmutete', function (data) {
+                        console.log(data);
                         if (player.isMuted()) {
                             player.unMute();
                             $('#mute-toggle').text('volume_up');
@@ -139,9 +152,17 @@
                     socket.on('setVolume', function (data) {
                         $('#volume-input').val(data.volumeOption);
                         player.setVolume(parseInt(data.volumeOption));
+                        audio.volume = parseInt(data.volumeOption)/100;
                     });
 
 
+                    audio.addEventListener("ended", function(){
+                    
+                        if(socket != null){
+                                console.log("emit finishSong");
+                                socket.emit('finishSong',{});
+                            }
+                    });
             }
             
         });
@@ -156,13 +177,6 @@
             }
         }
 
-         audio.addEventListener("ended", function(){
-          
-            if(socket != null){
-                    console.log("emit finishSong");
-                    socket.emit('finishSong',{});
-                }
-         });
 
 
         function updateSource(url) {

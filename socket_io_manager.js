@@ -15,10 +15,7 @@ function addSocketToMap(key, value) {
 
 var finishSongFunc = (data,roomClient) => {
         ds.deleteSongWhenFinishPlaying(roomClient.roomIdentifier,"room_songs",function(result){
-                console.log("delete result",result);
                         ds.countIfIsThereAnySong(roomClient.roomIdentifier,function(data){
-                            console.log("count",data);
-                            console.log("count ten room",roomClient.roomIdentifier);
                                 if(data.length > 0){
                                     let roomSongs = data[0].room_songs[0];
                                     let videoObj;
@@ -44,20 +41,45 @@ var finishSongFunc = (data,roomClient) => {
     
 }
 
- const startSocketForRoomName = (roomIdentifier) =>{
-            let room = io.of('/' + roomIdentifier);
-           
-            //addSocketToMap(roomIdentifier,room);
-            room.roomIdentifier = roomIdentifier;
-            room.on('connection',function(socket){
-                console.log("Client connected to ",roomIdentifier);
-                room.emit('messages',{msg:'joined room'});   
-                socket.roomIdentifier = roomIdentifier;
-                onConnection(socket); 
-                       
-            });
-           // roomsIO.push(room);
+const checkAuthRoomNameAndPassword = (data,callback) => {
+    console.log("data from client",data);
+        ds.authenticateRoomNameAndPassword(data,(result)=>{
+            if(result.length > 0){
+                     callback(false,true);
+                }else{
+                     callback(true,false);
+            }
+        });
 }
+// const startSocketForRoomName = (roomIdentifier) =>{
+//             console.log("Start socket for room",roomIdentifier);
+//             let room = io.of('/' + roomIdentifier);
+//             //addSocketToMap(roomIdentifier,room);
+//             //room.roomIdentifier = roomIdentifier;
+//             room.on('connection',function(socket){
+//                 console.log("Client connected to ",roomIdentifier);
+//                 socket.auth = false;
+//                 socket.on('authenticate',function(data){
+//                         console.log("data from client",data);
+//                         checkAuthRoomNameAndPassword(data, function(err, success){
+//                             if (!err && success){
+//                                 console.log("Authenticated socket ", socket.id);
+//                                 socket.auth = true;
+//                                 socket.roomIdentifier = roomIdentifier;
+//                                 room.emit('messages',{msg:'joined room'});   
+//                                 onConnection(socket);
+//                             }
+//                         });
+//                 });
+//                 setTimeout(function(){
+//                     //If the socket didn't authenticate, disconnect it
+//                     if (!socket.auth) {
+//                         console.log("Disconnecting socket ", socket.id);
+//                         socket.disconnect('unauthorized');
+//                     }
+//                 }, 1000);
+//             });
+// }
 
 const onConnection = (room) =>{
 
@@ -92,17 +114,44 @@ module.exports = {
             });
         }
     },
-   startSocketForAllRooms : (socketIO) => {
+    startSocketForRoomName : (roomIdentifier) =>{
+            console.log("Start socket for room",roomIdentifier);
+            let room = io.of('/' + roomIdentifier);
+            //addSocketToMap(roomIdentifier,room);
+            //room.roomIdentifier = roomIdentifier;
+            room.on('connection',function(socket){
+                console.log("Client connected to ",roomIdentifier);
+                socket.auth = false;
+                socket.on('authenticate',function(data){
+                        console.log("data from client",data);
+                        checkAuthRoomNameAndPassword(data, function(err, success){
+                            if (!err && success){
+                                console.log("Authenticated socket ", socket.id);
+                                socket.auth = true;
+                                socket.roomIdentifier = roomIdentifier;
+                                room.emit('messages',{msg:'joined room'});   
+                                onConnection(socket);
+                            }
+                        });
+                });
+                setTimeout(function(){
+                    //If the socket didn't authenticate, disconnect it
+                    if (!socket.auth) {
+                        console.log("Disconnecting socket ", socket.id);
+                        socket.disconnect('unauthorized');
+                    }
+                }, 1000);
+            });
+    },
+    startSocketForAllRooms : (socketIO) => {
        io = socketIO;
        ds.getListRoomInDB((result)=>{
             for (var r of result) {
-                    console.log("Start socket for room",r.room_identifier);
-                    startSocketForRoomName(r.room_identifier);
+                    module.exports.startSocketForRoomName(r.room_identifier);
             }
            
        });
         
     }
 }
- exports.userRoom = userRoom; 
-
+exports.userRoom = userRoom;

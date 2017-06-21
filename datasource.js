@@ -112,7 +112,7 @@ module.exports = {
     }, //redux,flux
     findSongPlaying: function(roomIdentifier,callback){
         connectToDatabase(function(db){
-            db.collection('room').find({},{'room_identifier':roomIdentifier,'room_songs':{$slice:1},'room_songs.song_name':1}).toArray(function(err,results){
+            db.collection('room').find({},{'room_identifier':roomIdentifier},{'room_songs':{$slice:1},'room_songs.song_name':1}).toArray(function(err,results){
                 if(err){
                     console.log("Error db when finding",err);
                     db.close();
@@ -184,8 +184,41 @@ module.exports = {
                 callback(result);
             });
         });
-    }
+    },
+    authenticateRoomNameAndPassword : (data,callback) => {
+        connectToDatabase(function(db){
+            db.collection("room").find({room_identifier : data.roomIdentifier, room_password : data.roomPassword}).toArray((err,result)=>{
+                if(err){
+                    console.log("error finding user",err);
 
+                    db.close();
+                    return;
+                }
+                callback(result);
+                db.close();
+                
+            });
+        });
+    },
+    createMoreRoom : (data,callback) =>{
+        connectToDatabase(function(db){
+                
+                db.collection("room").insertOne({
+                    "room_identifier" : data.roomName,
+                    "room_password" : data.roomPassword,
+                    "room_songs" :[],
+                    "currentPlaying":{},
+                    "user_in_room":[],
+                    "room_owner" : data.userID,
+                })
+                .then(function(result) {
+                // process result
+                    callback(result);
+                }).catch((err)=>{
+                    console.log("create more room",err);
+                });
+        });
+    }
 }
   // db.collection("room").count().then(count => {
                 //     if (count < 10) {
