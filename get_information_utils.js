@@ -41,19 +41,12 @@ module.exports =  {
          var match = url.match(regExp);
          return match && match[7].length == 11 ? match[7] : false;
     },
-    getNhacCuaTuiId : function(url,callback){
-
-    },
-    getMP3VideoId : function(url,callback){
-        try {
-            let splitStrArrFromUrl = url.split("/");
-            let secondSplit = splitStrArrFromUrl[5].split(".");
-            console.log("url Zing", url);
-            callback(secondSplit[0] && secondSplit[0].length == 8 ? secondSplit[0] : false);
+    getMP3VideoId : function(url){
+        let Mp3pattern = /http:\/\/mp3.zing.vn\/(bai-hat|video-clip)\/([a-zA-Z0-9-]+)\/([A-Z0-9]+).html/;
+        if(Mp3pattern.exec(url) != null){
+                return Mp3pattern.exec(url)[3];
         }
-        catch(err){
-            callback(err);
-        }
+        return false;
     }, 
     getHTMLContentForNhacCuaTui : function(url,cb){
         request.get(url, function (error, response, body) {
@@ -73,8 +66,8 @@ module.exports =  {
             //   });
             
             }
-    });
-}
+        });
+    }
 
 
 }

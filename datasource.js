@@ -137,6 +137,30 @@ module.exports = {
             });
         });
     },
+    getNumberOfSongPromise : (playlist_type) =>{
+        return new Promise((resolve,reject)=>{
+            connectToDatabase(function(db){
+                db.collection('room').aggregate(
+                    [
+                        {
+                            $project: {
+                                number_room_songs: { $size: "$"+playlist_type }
+                            }
+                        }
+                    ]
+                ,(err,result) => {
+                    if(err){
+                        console.log("Error db when getting count",err);
+                        db.close();
+                        reject(err);
+                    }
+                    
+                    resolve(result);
+                    db.close();
+                });
+            });
+        });
+    },
     getNumberOfSong : function(playlist_type,callback){
         connectToDatabase(function(db){
                 db.collection('room').aggregate(
@@ -200,6 +224,28 @@ module.exports = {
             });
         });
     },
+    createMoreRoomPromise : (data) => {
+        return new Promise((resolve,reject) =>{
+            connectToDatabase((db)=> {
+                db.collection("room").insertOne({
+                     "room_identifier" : data.roomName,
+                     "room_password" : data.roomPassword,
+                     "room_songs" :[],
+                     "currentPlaying":{},
+                     "user_in_room":[],
+                     "room_owner" : data.userID,
+                    })
+                    .then(function(result) {
+                         // process result
+                        resolve(result);
+                    }).catch((err)=>{
+                        console.log("create more room",err);
+                        reject(err);
+                    });
+            });
+        });
+           
+    },
     createMoreRoom : (data,callback) =>{
         connectToDatabase(function(db){
                 
@@ -219,6 +265,12 @@ module.exports = {
                 });
         });
     }
+    // ,
+    // checkSpeaker : (data,callback) => {
+    //     connectToDatabase(function(db){
+    //         db.collection("room").find({},
+    //     });
+    // }
 }
   // db.collection("room").count().then(count => {
                 //     if (count < 10) {

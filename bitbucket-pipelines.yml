@@ -10,4 +10,4 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
           - npm install
-         # - git push https://heroku:cb9ba0e6-e782-49c7-a863-769d0876ab2c@git.heroku.com/sky-lab-music-bot.git HEAD
+          - git push https://heroku:cb9ba0e6-e782-49c7-a863-769d0876ab2c@git.heroku.com/sky-lab-music-bot.git HEAD

@@ -1,21 +1,19 @@
 const receivedMsg = require("./receive_message.js");
 const socketIo = require("./socket_io_manager.js");
 const ds = require("./datasource.js");
+const room = require("./roomHandle.js");
 
 var express = require("express");
 var router = express.Router();
 
 var returnRouter = function(io) {
     let socketClient = null;
-
-    socketIo.getSocketClient(io, function(data) {
-        socketClient = data;
-    });
     socketIo.startSocketForAllRooms(io);
     // Index route
     router.get("/", function(req, res) {
         res.send("Hello world, I am a chat bot hihi");
     });
+ 
 
     router.get("/youtube/", function(req, res) {
         res.sendFile("/youtube.html", { root: __dirname });
@@ -25,9 +23,51 @@ var returnRouter = function(io) {
         res.sendFile("/views/control.html", { root: __dirname });
     });
 
+    // router.post("/nhatmappost",function(req,res){
+    //         console.log(req);
+    //         res.send({"msg":"ok"});
+    // });
+
+    // router.get("/nhatmaptest",function(req,res){
+    //     let data = {
+                 
+    //             "messages": [
+    //                 {
+
+    //                     "text":  "Chọn phòng",
+    //                     "quick_replies": [
+    //                         {
+    //                         "set_attributes": 
+    //                             {
+    //                             "room": "nhat map"
+    //                             },
+    //                         "title":"phòng nhat map",
+    //                         "block_names":["Input Password"]
+    //                         },
+    //                         {
+    //                             "set_attributes": 
+    //                                 {
+    //                                 "room": "nhat ko map"
+    //                                 },
+    //                             "title":"phòng nhật ko mập",
+    //                             "block_names":["Input Password"]
+    //                         }
+    //                     ]
+    //                }
+    //             ]
+    //         };
+
+
+    //     res.send(data);
+    // });
+
+
+    router.get("/getlistroom",room.findAllRoom);
+
     router.post("/client-control/", function(req, res) {
         res.sendFile("/views/control.html", { root: __dirname });
     });
+
 
     router.get("/login", function(req, res) {
         res.sendFile("/views/login.html", { root: __dirname });

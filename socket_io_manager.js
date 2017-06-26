@@ -2,18 +2,10 @@ const ds = require("./datasource.js");
 const get = require("./get_information_utils.js");
 let io = null;
 
-//var mapSocket = {};
 let userRoom =  {}; // { userID : 'roomID' }
-// let roomsIO = [];
-
-function addSocketToMap(key, value) {
-    //if the list is already created for the "key", then uses it
-    //else creates new list for the "key" to store multiple values in it.
-    mapSocket[key] = mapSocket[key] || [];
-    mapSocket[key].push(value);
-}
 
 var finishSongFunc = (data,roomClient) => {
+    console.log(roomClient.roomIdentifier);
         ds.deleteSongWhenFinishPlaying(roomClient.roomIdentifier,"room_songs",function(result){
                         ds.countIfIsThereAnySong(roomClient.roomIdentifier,function(data){
                                 if(data.length > 0){
@@ -42,7 +34,6 @@ var finishSongFunc = (data,roomClient) => {
 }
 
 const checkAuthRoomNameAndPassword = (data,callback) => {
-    console.log("data from client",data);
         ds.authenticateRoomNameAndPassword(data,(result)=>{
             if(result.length > 0){
                      callback(false,true);
@@ -51,39 +42,12 @@ const checkAuthRoomNameAndPassword = (data,callback) => {
             }
         });
 }
-// const startSocketForRoomName = (roomIdentifier) =>{
-//             console.log("Start socket for room",roomIdentifier);
-//             let room = io.of('/' + roomIdentifier);
-//             //addSocketToMap(roomIdentifier,room);
-//             //room.roomIdentifier = roomIdentifier;
-//             room.on('connection',function(socket){
-//                 console.log("Client connected to ",roomIdentifier);
-//                 socket.auth = false;
-//                 socket.on('authenticate',function(data){
-//                         console.log("data from client",data);
-//                         checkAuthRoomNameAndPassword(data, function(err, success){
-//                             if (!err && success){
-//                                 console.log("Authenticated socket ", socket.id);
-//                                 socket.auth = true;
-//                                 socket.roomIdentifier = roomIdentifier;
-//                                 room.emit('messages',{msg:'joined room'});   
-//                                 onConnection(socket);
-//                             }
-//                         });
-//                 });
-//                 setTimeout(function(){
-//                     //If the socket didn't authenticate, disconnect it
-//                     if (!socket.auth) {
-//                         console.log("Disconnecting socket ", socket.id);
-//                         socket.disconnect('unauthorized');
-//                     }
-//                 }, 1000);
-//             });
-// }
-
+const checkSpeakerIsAlreadyHad = (data,callback) =>{
+    
+}
 const onConnection = (room) =>{
 
-             room.on("songPlayingTime",function(data){        
+            room.on("songPlayingTime",function(data){        
                    ds.updateTimeWhileSongPlaying(room.roomIdentifier,data.msg);
              });
 
@@ -98,22 +62,6 @@ const onConnection = (room) =>{
 }
 
 module.exports = {
-    getSocketClient : function(io,callback){
-        if(io != null){
-            io.on("connection", function(client) {  
-                    console.log("Client connected...");
-
-                    client.emit("messages", { msg: "Hello from server" });
-
-                    client.on("join", function(data) {
-                        console.log(data);
-                    });   
-
-                   
-                    callback(client);
-            });
-        }
-    },
     startSocketForRoomName : (roomIdentifier) =>{
             console.log("Start socket for room",roomIdentifier);
             let room = io.of('/' + roomIdentifier);
@@ -128,9 +76,9 @@ module.exports = {
                             if (!err && success){
                                 console.log("Authenticated socket ", socket.id);
                                 socket.auth = true;
-                                socket.roomIdentifier = roomIdentifier;
-                                room.emit('messages',{msg:'joined room'});   
-                                onConnection(socket);
+                                socket.roomIdentifier = roomIdentifier;             
+                                socket.emit('messages',{msg:'joined room'});
+                               
                             }
                         });
                 });
@@ -141,6 +89,8 @@ module.exports = {
                         socket.disconnect('unauthorized');
                     }
                 }, 1000);
+                onConnection(socket);
+                
             });
     },
     startSocketForAllRooms : (socketIO) => {

@@ -58,7 +58,7 @@
         var songPlaying;
         var player;
         var time_update_interval = 0;
-        
+        var songTypePlaying;
 
         $("#login").click(function(){
 
@@ -84,23 +84,32 @@
 
                     socket.on('songs', function (data) {
                         initialize();
+                        if(player != null){
+                            player.stopVideo();
+                        }
+                        if(audio!= null){
+                            audio.pause();
+                            audio.currentTime = 0;
+                        }
+
                         if (data.msg.song_type === 'zing' || data.msg.song_type === 'nhaccuatui') {
                             console.log(data.msg.song_url_play);
                             updateSource(data.msg.song_url_play);
+                            songTypePlaying = data.msg.song_type;
                         } else {
                             player.loadVideoById(data.msg.song_video_id);
+                            songTypePlaying = data.msg.song_type;
                         }
                         
                         socket.emit("songStart",{msg:{"playingID" : data.msg.song_id,"playingTime":0}});
 
                         setInterval (()=>{
                             if ((Math.round(player.getCurrentTime()%15) == 0) && Math.round(player.getCurrentTime()) !=0){
+                                        console.log(player.getCurrentTime());
                                         socket.emit("songPlayingTime",{msg: player.getCurrentTime()});
                             }
-                                
-                                
 
-                         
+
                         },1000);
 
 
@@ -114,7 +123,7 @@
                     });
 
                     socket.on('pause', function (data) {
-                        player.pauseVideo();
+                         player.pauseVideo();
                           audio.pause();
                     });
 
@@ -125,8 +134,13 @@
                     });
 
                     socket.on('resume', function (data) {
-                        player.playVideo();
-                        audio.play();
+                        if(songTypePlaying == 'youtube'){
+                            player.playVideo();
+                        }else{
+                             audio.play();
+                        }
+                        
+                       
                     });
 
                     socket.on('unmutete', function (data) {
@@ -135,18 +149,32 @@
                             player.unMute();
                             $('#mute-toggle').text('volume_up');
                         }
+                        if(audio.muted == true){
+                            audio.muted = false;
+                        }
                     });
 
                     socket.on('skip',function(data){
                         if(player != null){
                             player.stopVideo();
+                            player.loadVideoById("");
                         }
                         if(audio!= null){
                             audio.pause();
                             audio.currentTime = 0;
+                            updateSource("");
                         }
+                          
+
+                        if (data.msg.song_type === 'zing' || data.msg.song_type === 'nhaccuatui') {
+                            console.log(data.msg.song_url_play);
+                            updateSource(data.msg.song_url_play);
+                        } else {
+                            player.loadVideoById(data.msg.song_video_id);
+                        }
+
                         console.log("skip",data);
-                        socket.emit('finishSong',{});
+                        
                     });
 
                     socket.on('setVolume', function (data) {
