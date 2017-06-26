@@ -1,6 +1,5 @@
-
 const mongodb = require("mongodb");
-const mongodbUrl = process.env.MONGOLAB_URI;
+const mongodbUrl = "mongodb://skylab.vn:27017/skylab_chatbot";
 
 var MongoClient = mongodb.MongoClient;
 function connectToDatabase(callback){
