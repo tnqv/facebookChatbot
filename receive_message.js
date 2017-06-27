@@ -361,19 +361,19 @@ module.exports = {
                 if(messageText.includes("Use skylab music")){
                       userState[""+senderID] = {currentState :PRE_SELECT_ROOM};
                       sendMessage.sendTextMessage(senderID,"skylab music đã chấp nhận lời yêu cầu của bạn !");
-                     
+                      userState[""+ senderID] = { currentState: SELECT_ROOM};
+                      sendMessage.sendQuickReplyMessageForRoomList(senderID);
                 }else sendMessage.sendTextMessage(senderID,"Chào mừng bạn đến với skylab music chat bot , ... getting started ... (Nhập 'Use skylab music' )");
                 break;   
-            case PRE_SELECT_ROOM:
+            // case PRE_SELECT_ROOM:
                  
-                 if(messageText.includes("OK")){
-                         userState[""+ senderID] = { currentState: SELECT_ROOM};
-                         sendMessage.sendQuickReplyMessageForRoomList(senderID);
-                 }else if(messageText.includes("CREATE ROOM")){
-                        userState[""+senderID] = {currentState : CREATE_ROOM};
-                        sendMessage.sendTextMessage(senderID,"Bạn đã chọn tính năng tạo phòng !");
-                 }else  sendMessage.sendTextMessage(senderID,"Hiện tại bạn chưa có phòng để điều khiển , bạn muốn chọn phòng chứ ? ( Nhập 'OK' )");
-                break;
+            //      if(messageText.includes("OK")){
+                         
+            //      }else if(messageText.includes("CREATE ROOM")){
+            //             userState[""+senderID] = {currentState : CREATE_ROOM};
+            //             sendMessage.sendTextMessage(senderID,"Bạn đã chọn tính năng tạo phòng !");
+            //      }else  sendMessage.sendTextMessage(senderID,"Hiện tại bạn chưa có phòng để điều khiển , bạn muốn chọn phòng chứ ? ( Nhập 'OK' )");
+            //     break;
             case CREATE_ROOM:
                 let patt = /CREATE ROOM ([0-9a-zA-Z]+)/i;
                 if(patt.exec(messageText) != null){
