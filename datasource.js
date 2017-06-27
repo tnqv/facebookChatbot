@@ -123,6 +123,22 @@ module.exports = {
             });
         });
     },
+    findTimePlayingNow : (roomIdentifier) => {
+        return new Promise((resolve,reject)=>{
+            connectToDatabase(function(db){
+                db.collection('room').find({'room_identifier':roomIdentifier}).toArray(function(err,results){
+                    if(err){
+                        console.log("Error db when finding",err);
+                        db.close();
+                        reject(err);
+                    }
+                    db.close();
+                    resolve(results);
+                    
+                });
+            });
+        });
+    },
     countIfIsThereAnySong: function(roomIdentifier,callback){
         connectToDatabase(function(db){
             db.collection('room').find({'room_identifier':roomIdentifier,room_songs:{$exists : true},$where:'this.room_songs.length > 0'}).toArray(function(err,results){

@@ -229,20 +229,20 @@ var youtubeVideoHandle = (messageText,songId,senderID,first_name,socketClient) =
             senderID,
             "Ô kê quẩy lên " + first_name + "!!"
         );
-
     }else{
         return false;
     }
 
 }
-
+var noCommandFound = true;
 var musicControlCommandHandle = (messageText,senderID,socketClient) =>{
+    
     if (messageText.includes("skip this song")) {
         // if (socketClient != null) {
         //   //  console.log("skip this song", socketClient.roomIdentifier);
         //     socketClient.emit("skip", {});
         // }
-
+        noCommandFound = false;
         ds.deleteSongWhenFinishPlaying(userSelectedRoom[""+senderID],"room_songs",function(result){
             ds.countIfIsThereAnySong(userSelectedRoom[""+senderID],function(data){
                     if(data.length > 0){
@@ -275,10 +275,18 @@ var musicControlCommandHandle = (messageText,senderID,socketClient) =>{
                 senderID,
                 "Bài đang phát là : " + data[0].room_songs[0].song_name
             );
+            noCommandFound = false;
         });
         return;
     }
-
+    if(messageText.includes("time now")){
+        
+        ds.findTimePlayingNow(userSelectedRoom[""+senderID]).then(data=>{
+            sendMessage.sendTextMessage(senderID,"Thời gian đang phát hiện tại là " + data[0].currentPlaying.playingTime);
+            noCommandFound = false;
+            return;
+        });
+    }
     if (
         messageText.includes("mute") ||
         messageText.includes("nín") ||
@@ -286,38 +294,38 @@ var musicControlCommandHandle = (messageText,senderID,socketClient) =>{
     ) {
         if (socketClient != null) {
             socketClient.emit("mute", {});
+            noCommandFound = false;
         }
         return;
     }
-
     if (messageText.includes("unmute") || messageText.includes("giải câm")) {
         if (socketClient != null) {
             socketClient.emit("unmutete", {});
+            noCommandFound = false;
         }
         return;
     }
-
     if (messageText.includes("dừng") || messageText.includes("pause")) {
         if (socketClient != null) {
             socketClient.emit("pause", {});
+            noCommandFound = false;
         }
         return;
     }
-
     if (messageText.includes("stop")) {
         if (socketClient != null) {
             socketClient.emit("stop", {});
+            noCommandFound = false;
         }
         return;
     }
-
     if (messageText.includes("resume")) {
         if (socketClient != null) {
             socketClient.emit("resume", {});
+            noCommandFound = false;
         }
         return;
     }
-
     if (messageText.includes("set volume")) {
         let arrayMessage = new Array();
         arrayMessage = messageText.split(" ");
@@ -325,6 +333,11 @@ var musicControlCommandHandle = (messageText,senderID,socketClient) =>{
         if (socketClient != null) {
             socketClient.emit("setVolume", { volumeOption: volumeNumber });
         }
+        noCommandFound = false;
+        return;
+    }
+    if(noCommandFound === true){
+        sendMessage.sendTextMessage(senderID,"Sai cú pháp rồi !!!!");
         return;
     }
 }
@@ -486,15 +499,30 @@ module.exports = {
                                         return;
                                     }
                                     let songId;
-                                    if(youtubeVideoHandle(messageText,songId,senderID,first_name,socketClient)){
-
-                                    }else if(zingMp3MusicHandle(messageText,songId,senderID,first_name,socketClient)){
-
-                                    }else if(nhaccuatuiMusicHandle(messageText,songId,senderID,first_name,socketClient)){
-
-                                    }else {
-                                         musicControlCommandHandle(messageText,senderID,socketClient);
-                                    }                                     
+                                    
+                                    let commandYes = true;
+                                         new Promise((resolve,reject)=>{
+                                                
+                                                if(youtubeVideoHandle(messageText,songId,senderID,first_name,socketClient)){
+                                                    commandYes = false;
+                                                    resolve(commandYes);
+                                                }
+                                                if(zingMp3MusicHandle(messageText,songId,senderID,first_name,socketClient)){
+                                                    commandYes = false;
+                                                    resolve(commandYes);
+                                                }
+                                                if(nhaccuatuiMusicHandle(messageText,songId,senderID,first_name,socketClient)){
+                                                    commandYes = false;
+                                                    resolve(commandYes);
+                                                }else {
+                                                    resolve(commandYes);
+                                                }
+                                         }).then(data=>{
+                                             if(commandYes) musicControlCommandHandle(messageText,senderID,socketClient);
+                                         }).catch(err =>{
+                                             console.log("request err",err);
+                                         });
+                                                                         
 
                                     //Default text
                                     // switch (messageText) {

@@ -109,11 +109,17 @@
                         socket.emit("songStart",{msg:{"playingID" : data.msg.song_id,"playingTime":0}});
 
                         setInterval (()=>{
-                            if ((Math.round(player.getCurrentTime()%15) == 0) && Math.round(player.getCurrentTime()) !=0){
-                                        console.log(player.getCurrentTime());
-                                        socket.emit("songPlayingTime",{msg: player.getCurrentTime()});
+                            if(songTypePlaying == 'youtube'){
+                                if ((Math.round(player.getCurrentTime()%4) == 0) && Math.round(player.getCurrentTime()) !=0){
+                                    
+                                    socket.emit("songPlayingTime",{msg: player.getCurrentTime()});
+                                }
+                            }else{
+                                if ((Math.round(audio.currentTime %4) == 0) && Math.round(audio.currentTime) !=0){
+                                    
+                                    socket.emit("songPlayingTime",{msg: audio.currentTime});
+                                }
                             }
-
 
                         },1000);
 
@@ -196,17 +202,42 @@
                                 socket.emit('finishSong',{});
                             }
                     });
+
+                    player = new YT.Player('video-placeholder', {
+                            width: 600,
+                            height: 400,
+                            playerVars: {
+                                color: 'white',
+                            },
+                            events: {
+                                onReady: initialize,
+                                onStateChange : (event) => {
+                                    
+                                    if(event.data === 0){
+                                        // the video is end, do something here.
+                                        
+                                        console.log("emit finishSong");
+                                        socket.emit('finishSong',{});
+                                    }
+                                }
+                            }
+                    });
+                    // player.addEventListener("onPlayerStateChange", function(state){
+                    //     if(state === 0){
+                    //         // the video is end, do something here.
+
+                    //         console.log("emit finishSong");
+                    //         socket.emit('finishSong',{});
+                    //     }
+                    // });
             }
             
         });
        
        function onPlayerStateChange(event) {  
-                
             if(event.data === 0) {
-                if(socket != null){
-                    console.log("emit finishSong");
-                    socket.emit('finishSong',{});
-                }
+                
+                
             }
         }
 
@@ -223,17 +254,7 @@
       
 
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('video-placeholder', {
-                width: 600,
-                height: 400,
-                playerVars: {
-                    color: 'white',
-                },
-                events: {
-                    onReady: initialize,
-                    onPlayerStateChange : onPlayerStateChange
-                }
-            });
+          
         }
 
         function initialize() {

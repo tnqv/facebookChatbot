@@ -78,7 +78,7 @@ module.exports = {
                                 socket.auth = true;
                                 socket.roomIdentifier = roomIdentifier;             
                                 socket.emit('messages',{msg:'joined room'});
-                               
+                                
                             }
                         });
                 });
@@ -90,8 +90,8 @@ module.exports = {
                         socket.disconnect('unauthorized');
                     }
                 }, 2000);
+               
                 onConnection(socket);
-                
             });
     },
     startSocketForAllRooms : (socketIO) => {
