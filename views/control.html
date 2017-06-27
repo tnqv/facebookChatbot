@@ -61,7 +61,7 @@
         var songTypePlaying;
 
         $("#login").click(function(){
-
+ 
             var roomName = $("#roomName").val();
             var roomPassword = $("#roomPassword").val();
             if(roomName){
@@ -69,7 +69,11 @@
                      socket.on('connect', function(){
                            socket.emit("authenticate",{"roomIdentifier" : roomName,"roomPassword" : roomPassword});
                      });
-                                          
+                    
+                    socket.on('unauthor',function(data){
+                        $('#chat').val(data.msg);
+                    });
+
                     socket.on('connection', function (data) {
                         console.log(data);
 
@@ -78,7 +82,8 @@
                     });
                    socket.on('messages', function (data) {
                         console.log(data);
-                        $('#chat').append(data.msg + "<br/>");
+                        $('#chat').val(data.msg);
+                      
                     });
 
 

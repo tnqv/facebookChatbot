@@ -86,9 +86,10 @@ module.exports = {
                     //If the socket didn't authenticate, disconnect it
                     if (!socket.auth) {
                         console.log("Disconnecting socket ", socket.id);
+                        socket.emit('unauthor',{msg:'Authenticate failed'});
                         socket.disconnect('unauthorized');
                     }
-                }, 3000);
+                }, 2000);
                 onConnection(socket);
                 
             });
