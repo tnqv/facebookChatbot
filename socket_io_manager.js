@@ -88,7 +88,7 @@ module.exports = {
                         console.log("Disconnecting socket ", socket.id);
                         socket.disconnect('unauthorized');
                     }
-                }, 1000);
+                }, 3000);
                 onConnection(socket);
                 
             });
